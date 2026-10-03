@@ -19,6 +19,7 @@ export interface SessionState {
   id: string;
   merchantQrId: string;
   merchantName: string;
+  userId: string;
   userName: string;
   startTime: number;
   ratePerSecond: number;

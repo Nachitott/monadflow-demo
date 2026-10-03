@@ -21,6 +21,7 @@ import {
   closeSession,
   createSession,
   fetchMerchant,
+  fetchMyActiveSession,
   fetchSession,
   type Merchant,
   type StreamSession,
@@ -57,6 +58,19 @@ export default function ConsumoPage() {
       }
     });
   }, [ready, authenticated, merchant, scannedCode]);
+
+  // If this user already has an open consumption (e.g. they navigated
+  // away or re-scanned the QR), resume it instead of starting a new one.
+  useEffect(() => {
+    if (!ready || !authenticated || !user?.id) return;
+    fetchMyActiveSession(user.id).then((s) => {
+      if (s) {
+        setSession(s);
+        setStep('active');
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, authenticated, user?.id]);
 
   if (!ready) {
     return (
@@ -103,14 +117,16 @@ export default function ConsumoPage() {
 
   const handleStart = async () => {
     if (!capValid || !enoughBalance || !merchant) return;
-    const s = await createSession({
+    const { session: s, resumed } = await createSession({
+      userId: user?.id ?? 'anon',
       userName:
         user?.google?.name ?? user?.apple?.email ?? user?.email?.address ?? 'Cliente',
       currency: 'ARS',
       maxCap: cap,
     });
-    // Hold the full cap — the unused part is refunded on checkout.
-    updateBalance(-cap, 'ARS');
+    // Hold the full cap only on a fresh session — a resumed one already
+    // had its cap deducted when it was created.
+    if (!resumed) updateBalance(-cap, 'ARS');
     setSession(s);
     setStep('active');
   };
@@ -252,7 +268,7 @@ export default function ConsumoPage() {
           </p>
           <button
             onClick={handleFinish}
-            className="mt-auto flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 font-medium text-white transition hover:bg-rose-500"
+            className="sticky bottom-4 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 font-medium text-white shadow-lg shadow-rose-950/50 transition hover:bg-rose-500"
           >
             <Square className="h-4 w-4 fill-current" />
             Finalizar consumo

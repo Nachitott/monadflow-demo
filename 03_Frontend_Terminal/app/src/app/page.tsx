@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { ArrowDownLeft, Loader2, QrCode, Store } from 'lucide-react';
+import ActiveSessionBanner from '@/components/stream/ActiveSessionBanner';
 import BalanceCard from '@/components/BalanceCard';
 import FiatRampModal from '@/components/FiatRampModal';
 import HeaderUserBar from '@/components/HeaderUserBar';
@@ -53,6 +54,8 @@ export default function Home() {
               minute: '2-digit',
             })}`}
         </p>
+
+        <ActiveSessionBanner />
 
         <div className="grid grid-cols-2 gap-4">
           <Link

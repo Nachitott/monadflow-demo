@@ -25,6 +25,8 @@ Repo **doc-first**. Los directorios numerados son notas de un vault Obsidian, en
 
 No hay `package.json` raíz, ni workspaces, ni turbo, ni monorepo tooling. **Todo comando corre dentro del proyecto que corresponda.**
 
+Los perfiles de agente viven en `00_System/Agents/` (01–07). El **07_Market_Strategy** es de solo documentación (mercado, copy y pitch): no toca código y co-redacta el pitch junto al PM (Agente 01).
+
 ## 2. Los dos proyectos de código
 
 Son **independientes por diseño**: package.json, `node_modules`, build y deploy separados. La landing **no importa nada** de la app y viceversa. No los fusiones, no los linkees, no muevas archivos de uno al otro salvo pedido explícito.

@@ -18,3 +18,6 @@ Registro de errores y soluciones.
 3. **QR "rotaba" y códigos dados de baja "revivían" en producción** — el store in-memory es por instancia serverless de Vercel; cada request podía responder un `qrId` distinto. **Solución:** estado compartido en KV/Upstash vía REST (`src/lib/server/db.ts` + store async); fallback in-memory solo para dev local.
 4. **Botón "Iniciar consumo" no visible / deshabilitado en móvil** — `mt-auto` lo empujaba fuera del viewport y `cap > saldo` lo deshabilitaba sin feedback accionable. **Solución:** botón sticky `bottom-4`, "Usar todo mi saldo" y aviso ámbar con botón "Ajustar a $X".
 5. **Múltiples `next dev` zombies compartiendo `.next` → 500/404 intermitentes** — procesos viejos quedaban escuchando en 3000-3002. **Solución:** matar listeners por puerto y limpiar `.next`.
+6. **Re-escaneo del QR creaba sesiones paralelas** — no había dedup por usuario. **Solución:** `userId` en sesión + 409 con reanudación en `POST /api/sessions`; `/consumo` auto-reanuda al montar.
+7. **"Finalizar consumo" invisible en móvil** — mismo problema que el botón de iniciar. **Solución:** sticky `bottom-4`.
+8. **Consumo quedaba corriendo sin indicador** al volver al home. **Solución:** `ActiveSessionBanner` persistente con polling.

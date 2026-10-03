@@ -14,7 +14,7 @@ Garantizar la consistencia estratégica de MonadFlow, velar por el principio de 
 1. Revisar los cambios o requerimientos en `00_System/CONTEXTO_MAESTRO.md`.
 2. Validar que las propuestas cumplan con las reglas de UX Invisible descritas en `00_System/Skills/web3_invisible_ux_rules.md`.
 3. Desglosar las necesidades en tareas funcionales para los backlogs correspondientes (`02_SmartContracts_Terminal/TASK_BACKLOG.md` y `03_Frontend_Terminal/TASK_BACKLOG.md`).
-4. Diseñar y pulir el guion del Pitch y la estructura de la presentación para la hackathon en `01_Architecture/PITCH_GUION.md`.
+4. Co-redactar el guion del Pitch y la estructura de la presentación en `01_Architecture/PITCH_GUION.md` junto al Agente 07 (Market Strategy), que lidera narrativa y argumentos de mercado; el PM valida la alineación con MODO 1/MODO 2 y con las reglas de UX invisible.
 
 ## Mandated Inputs
 - `00_System/CONTEXTO_MAESTRO.md`
