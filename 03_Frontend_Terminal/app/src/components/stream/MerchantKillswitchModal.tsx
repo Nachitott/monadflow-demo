@@ -34,7 +34,8 @@ export default function MerchantKillswitchModal({
           No se permitirán nuevos ingresos hasta reactivarlo.
         </p>
         <p className="mt-2 text-xs text-slate-500">
-          Las sesiones en curso no se interrumpen.
+          Las sesiones en curso continúan — se cerrarán cobrando lo consumido
+          cuando generes un código nuevo.
         </p>
         <div className="mt-5 flex gap-3">
           <button

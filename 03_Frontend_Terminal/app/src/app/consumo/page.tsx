@@ -13,11 +13,14 @@ import {
   Square,
 } from 'lucide-react';
 import LiveStreamTimer from '@/components/stream/LiveStreamTimer';
+import QRScanner from '@/components/stream/QRScanner';
 import StreamSummaryCard from '@/components/stream/StreamSummaryCard';
 import { useBalances } from '@/lib/BalanceContext';
 import { getMerchant, type Merchant } from '@/lib/merchant';
 import {
   accruedAmount,
+  getSession,
+  onSessionsChange,
   startSession,
   endSession,
   type StreamSession,
@@ -74,21 +77,32 @@ export default function ConsumoPage() {
   const capValid = cap > 0;
   const enoughBalance = balances.ARS >= cap;
 
-  const handleScan = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      const m = getMerchant();
-      setMerchant(m);
-      if (!m.active) setBlocked(true);
-      else setStep('cap');
-    }, 1400);
+  const resolveMerchant = (code: string | null) => {
+    const m = getMerchant();
+    setMerchant(m);
+    setScanning(false);
+    if (!m.active || (code && m.qrId !== code)) setBlocked(true);
+    else setStep('cap');
   };
+
+  const handleScanResult = (code: string) => resolveMerchant(code);
+  const handleManualEntry = () => resolveMerchant(null);
+
+  // If the merchant regenerates the QR, our session gets closed from
+  // the dashboard — finish the flow locally and refund the unused cap.
+  useEffect(() => {
+    if (step !== 'active' || !session) return;
+    return onSessionsChange(() => {
+      if (getSession(session.id)?.ended) handleFinish();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, session]);
 
   const handleStart = () => {
     if (!capValid || !enoughBalance || !merchant) return;
     const s = startSession({
       merchantName: merchant.name,
+      merchantQrId: merchant.qrId,
       userName:
         user?.google?.name ?? user?.apple?.email ?? user?.email?.address ?? 'Cliente',
       ratePerSecond: merchant.ratePerMinute / 60,
@@ -124,20 +138,28 @@ export default function ConsumoPage() {
           <p className="max-w-xs text-center text-sm text-slate-400">
             Apuntá al código del establecimiento para iniciar tu consumo.
           </p>
-          <button
-            onClick={handleScan}
-            disabled={scanning}
-            className="flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-emerald-500/50 bg-slate-900 text-emerald-400 transition hover:border-emerald-400 disabled:opacity-60"
-          >
-            {scanning ? (
-              <Loader2 className="h-10 w-10 animate-spin" />
-            ) : (
-              <ScanLine className="h-10 w-10" />
-            )}
-            <span className="text-xs font-medium">
-              {scanning ? 'Leyendo código…' : 'Escanear código'}
-            </span>
-          </button>
+          {scanning ? (
+            <QRScanner
+              onResult={handleScanResult}
+              onCancel={() => setScanning(false)}
+            />
+          ) : (
+            <>
+              <button
+                onClick={() => setScanning(true)}
+                className="flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-emerald-500/50 bg-slate-900 text-emerald-400 transition hover:border-emerald-400"
+              >
+                <ScanLine className="h-10 w-10" />
+                <span className="text-xs font-medium">Escanear código</span>
+              </button>
+              <button
+                onClick={handleManualEntry}
+                className="text-xs text-slate-500 underline hover:text-slate-300"
+              >
+                Ingresar sin escanear (demo)
+              </button>
+            </>
+          )}
           {blocked && (
             <div className="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
               <Ban className="h-4 w-4" />

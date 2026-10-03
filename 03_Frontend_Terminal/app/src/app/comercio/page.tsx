@@ -25,6 +25,7 @@ import {
 import {
   accruedAmount,
   activeSessions,
+  endAllActiveSessions,
   listSessions,
   onSessionsChange,
   seedDemoSessions,
@@ -76,6 +77,13 @@ export default function ComercioPage() {
     const id = setInterval(reload, refreshMs);
     return () => clearInterval(id);
   }, [refreshMs, reload]);
+
+  // A brand-new code also closes every open session — each client is
+  // charged only for what they consumed and their held balance is freed.
+  const handleNewQr = () => {
+    endAllActiveSessions();
+    setMerchant(regenerateQr());
+  };
 
   const today = new Date().toDateString();
   const todays = listSessions().filter(
@@ -160,7 +168,7 @@ export default function ComercioPage() {
             <FileDown className="h-4 w-4" />
           </button>
           <button
-            onClick={() => (off ? setMerchant(regenerateQr()) : setConfirmOff(true))}
+            onClick={() => (off ? handleNewQr() : setConfirmOff(true))}
             aria-label={off ? 'Generar nuevo QR' : 'Killswitch'}
             className={`rounded-lg p-2 transition ${
               off
@@ -239,7 +247,7 @@ export default function ComercioPage() {
           </div>
           {off ? (
             <button
-              onClick={() => setMerchant(regenerateQr())}
+              onClick={handleNewQr}
               className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
             >
               Generar código nuevo
