@@ -25,3 +25,10 @@ BitÃ¡cora de trabajo para este perfil.
 - `QRScanner` agrandado (h-80, max-w-sm, qrbox 260px).
 - Verificado: build limpio; API end-to-end (POST sesión → regenerate → sesión cerrada con `totalPaid`); `/`, `/consumo`, `/comercio` 200.
 - Nota: el store in-memory cubre la demo en un mismo proceso (incluye Vercel single-instance en dev); no es persistencia durable multi-instancia — Fase 5 lo reemplaza por estado on-chain.
+
+## 2026-10-04 — Agente 03 (Frontend UX) — KV store + UX de tope y tarifa
+- Migrado el estado compartido a **Upstash Redis (KV REST)** (`lib/server/db.ts`, `store.ts` async) — elimina el QR rotativo y códigos "revividos" entre instancias de Vercel. Fallback in-memory en local.
+- `/comercio`: tarifa editable por hora (`update.ratePerMinute`); nombre editable conservado.
+- `/consumo`: botón "Iniciar consumo" sticky siempre visible; tope libre + "Usar todo mi saldo" + aviso con "Ajustar a $X" cuando el tope supera el saldo.
+- Verificado: dos procesos dev distintos devuelven el mismo `qrId` desde KV; flujo POST sesión → regenerate → cierre con `totalPaid`. Build limpio; rutas 200.
+- Requiere envs `KV_REST_API_URL`/`KV_REST_API_TOKEN` configuradas en Vercel.

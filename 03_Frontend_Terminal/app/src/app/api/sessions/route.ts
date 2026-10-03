@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStore, makeSessionId, type SessionState } from '@/lib/server/store';
+import {
+  getMerchant,
+  listSessions,
+  makeSessionId,
+  saveSession,
+  type SessionState,
+} from '@/lib/server/store';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const { sessions } = getStore();
+  const sessions = await listSessions();
   const activeOnly = req.nextUrl.searchParams.get('active') === '1';
   return NextResponse.json(activeOnly ? sessions.filter((s) => !s.ended) : sessions);
 }
 
 export async function POST(req: NextRequest) {
-  const store = getStore();
+  const merchant = await getMerchant();
   const body = await req.json().catch(() => ({}));
 
-  if (!store.merchant.active) {
+  if (!merchant.active) {
     return NextResponse.json({ error: 'merchant_inactive' }, { status: 409 });
   }
 
@@ -24,15 +30,15 @@ export async function POST(req: NextRequest) {
 
   const session: SessionState = {
     id: makeSessionId(),
-    merchantQrId: store.merchant.qrId,
-    merchantName: store.merchant.name,
+    merchantQrId: merchant.qrId,
+    merchantName: merchant.name,
     userName: String(body.userName ?? 'Cliente').slice(0, 40),
     startTime: Date.now(),
-    ratePerSecond: store.merchant.ratePerMinute / 60,
+    ratePerSecond: merchant.ratePerMinute / 60,
     currency: body.currency === 'USD' ? 'USD' : 'ARS',
     maxCap,
     ended: false,
   };
-  store.sessions.push(session);
+  await saveSession(session);
   return NextResponse.json(session, { status: 201 });
 }
