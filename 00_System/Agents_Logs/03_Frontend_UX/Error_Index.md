@@ -8,4 +8,7 @@ Registro de errores y soluciones.
 3. **Type error: `'passkey'` no es un `loginMethod` válido** en Privy v1. **Solución:** removido de `loginMethods` (Passkeys sigue disponible vía configuración de Privy en dashboard).
 4. **Prerender error: "invalid Privy app ID"** — `PrivyProvider` falla en static generation sin `NEXT_PUBLIC_PRIVY_APP_ID`. **Solución:** `export const dynamic = 'force-dynamic'` en `layout.tsx`; la autenticación es client-side.
 
+5. **Cámara QR requiere contexto seguro** — `getUserMedia`/`html5-qrcode` solo funciona en HTTPS o `localhost`; en LAN por IP (`http://192.168.x.x`) el navegador lo bloquea. **Solución:** botón "Ingresar sin escanear (demo)" como fallback permanente; en Vercel (HTTPS) la cámara funciona.
+6. **Dev server 500 recurrente: `webpack-runtime.js TypeError 'call'`** — correr `npm run build` mientras `npm run dev` está vivo corrompe `.next` (comparten el directorio). **Solución:** matar dev → `rm -rf .next` → reiniciar. Regla: nunca buildear con el dev server corriendo.
+
 * [Volver al Contexto Maestro](../../CONTEXTO_MAESTRO.md)
