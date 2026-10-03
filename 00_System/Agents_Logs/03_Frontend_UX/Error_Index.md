@@ -13,3 +13,8 @@ Registro de errores y soluciones.
 ## 2026-10-04 — Fase 3 cross-device
 1. **QR "inválido" al escanear desde otro dispositivo** — `getMerchant()` usaba localStorage por dispositivo; el escáner resolvía un `qrId` distinto al generado en la PC. **Solución:** store compartido en memoria del server (`src/lib/server/store.ts`) consumido vía API routes; toda validación de `qrId` y ciclo de vida de sesiones pasó a server-side.
 2. **Sesiones zombies tras regenerar QR** — los clientes activos seguían corriendo con el código viejo. **Solución:** `merchant.action=regenerate` cierra todas las sesiones activas server-side computando `totalPaid` por tiempo transcurrido; `/consumo` hace polling de su sesión y muestra el resumen con devolución.
+
+## 2026-10-04 — Cross-device hardening II
+3. **QR "rotaba" y códigos dados de baja "revivían" en producción** — el store in-memory es por instancia serverless de Vercel; cada request podía responder un `qrId` distinto. **Solución:** estado compartido en KV/Upstash vía REST (`src/lib/server/db.ts` + store async); fallback in-memory solo para dev local.
+4. **Botón "Iniciar consumo" no visible / deshabilitado en móvil** — `mt-auto` lo empujaba fuera del viewport y `cap > saldo` lo deshabilitaba sin feedback accionable. **Solución:** botón sticky `bottom-4`, "Usar todo mi saldo" y aviso ámbar con botón "Ajustar a $X".
+5. **Múltiples `next dev` zombies compartiendo `.next` → 500/404 intermitentes** — procesos viejos quedaban escuchando en 3000-3002. **Solución:** matar listeners por puerto y limpiar `.next`.

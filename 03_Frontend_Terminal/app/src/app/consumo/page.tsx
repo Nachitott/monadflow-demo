@@ -176,7 +176,7 @@ export default function ConsumoPage() {
             <div>
               <p className="font-semibold">{merchant.name}</p>
               <p className="font-mono text-xs text-slate-400">
-                {formatAmount(merchant.ratePerMinute, 'ARS')} por minuto
+                {formatAmount(merchant.ratePerMinute * 60, 'ARS')} por hora
               </p>
             </div>
           </div>
@@ -193,7 +193,7 @@ export default function ConsumoPage() {
               className="w-full bg-transparent px-2 py-3 font-mono text-lg outline-none"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {QUICK_CAPS.map((q) => (
               <button
                 key={q}
@@ -203,21 +203,35 @@ export default function ConsumoPage() {
                 {formatAmount(q, 'ARS')}
               </button>
             ))}
+            <button
+              onClick={() => setCapInput(String(Math.floor(balances.ARS)))}
+              className="rounded-lg border border-indigo-600 px-3 py-1 font-mono text-xs text-indigo-300 hover:border-indigo-400"
+            >
+              Usar todo mi saldo
+            </button>
           </div>
           <p className="text-xs text-slate-500">
-            Se reserva este monto de tu saldo ({formatAmount(balances.ARS, 'ARS')}{' '}
+            Escribí cualquier monto: se reserva de tu saldo ({formatAmount(balances.ARS, 'ARS')}{' '}
             disponibles) y lo que no uses se devuelve automáticamente al finalizar.
           </p>
           {!enoughBalance && capValid && (
-            <p className="text-xs text-amber-400">
-              Tu saldo no alcanza para ese tope — cargá saldo o bajá el límite.
-            </p>
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+              <p className="text-xs text-amber-300">
+                Tu saldo no alcanza para ese tope.
+              </p>
+              <button
+                onClick={() => setCapInput(String(Math.floor(balances.ARS)))}
+                className="shrink-0 rounded-lg bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-200 hover:bg-amber-500/30"
+              >
+                Ajustar a {formatAmount(Math.floor(balances.ARS), 'ARS')}
+              </button>
+            </div>
           )}
 
           <button
             onClick={handleStart}
             disabled={!capValid || !enoughBalance}
-            className="mt-auto rounded-xl bg-emerald-600 py-3 font-medium text-white transition enabled:hover:bg-emerald-500 disabled:opacity-40"
+            className="sticky bottom-4 mt-4 w-full rounded-xl bg-emerald-600 py-3 font-medium text-white shadow-lg shadow-emerald-950/50 transition enabled:hover:bg-emerald-500 disabled:opacity-40"
           >
             Iniciar consumo
           </button>

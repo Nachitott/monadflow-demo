@@ -46,6 +46,8 @@ export default function ComercioPage() {
   const [origin, setOrigin] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  const [editingRate, setEditingRate] = useState(false);
+  const [rateInput, setRateInput] = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
 
   const off = merchant ? !merchant.active : false;
@@ -85,6 +87,16 @@ export default function ComercioPage() {
     setEditingName(false);
     if (nameInput.trim()) {
       setMerchant(await merchantAction({ action: 'update', name: nameInput }));
+    }
+  };
+
+  const saveRate = async () => {
+    setEditingRate(false);
+    const perHour = Number(rateInput.replace(',', '.'));
+    if (perHour > 0) {
+      setMerchant(
+        await merchantAction({ action: 'update', ratePerMinute: perHour / 60 }),
+      );
     }
   };
 
@@ -151,9 +163,33 @@ export default function ComercioPage() {
               <Pencil className="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-300" />
             </button>
           )}
-          <p className="text-xs text-slate-400">
-            Panel del establecimiento · {merchant && formatAmount(merchant.ratePerMinute, 'ARS')}/min
-          </p>
+          {editingRate && merchant ? (
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-slate-400">$ / hora</span>
+              <input
+                autoFocus
+                inputMode="decimal"
+                value={rateInput}
+                onChange={(e) => setRateInput(e.target.value.replace(/[^0-9.,]/g, ''))}
+                onKeyDown={(e) => e.key === 'Enter' && saveRate()}
+                className="w-24 rounded-lg border border-indigo-500 bg-slate-950 px-2 py-1 font-mono text-sm outline-none"
+              />
+              <button onClick={saveRate} aria-label="Guardar tarifa" className="text-emerald-400">
+                <Check className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setRateInput(String(Math.round((merchant?.ratePerMinute ?? 0) * 60)));
+                setEditingRate(true);
+              }}
+              className="group flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200"
+            >
+              Panel del establecimiento · {merchant && formatAmount(merchant.ratePerMinute * 60, 'ARS')}/hora
+              <Pencil className="h-3 w-3 text-slate-500 group-hover:text-slate-300" />
+            </button>
+          )}
         </div>
         {off ? (
           <span className="flex items-center gap-1 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-medium text-rose-400">
