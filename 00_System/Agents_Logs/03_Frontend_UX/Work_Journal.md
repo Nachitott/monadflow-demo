@@ -32,3 +32,9 @@ BitÃ¡cora de trabajo para este perfil.
 - `/consumo`: botón "Iniciar consumo" sticky siempre visible; tope libre + "Usar todo mi saldo" + aviso con "Ajustar a $X" cuando el tope supera el saldo.
 - Verificado: dos procesos dev distintos devuelven el mismo `qrId` desde KV; flujo POST sesión → regenerate → cierre con `totalPaid`. Build limpio; rutas 200.
 - Requiere envs `KV_REST_API_URL`/`KV_REST_API_TOKEN` configuradas en Vercel.
+
+## 2026-10-04 — Agente 03 (Frontend UX) — Sesión única + banner persistente
+- `SessionState.userId` (Privy id): `POST /api/sessions` devuelve 409 + sesión existente si el usuario ya tiene consumo abierto — re-escanear el QR reanuda, nunca duplica.
+- `/consumo`: al montar, `fetchMyActiveSession(user.id)` reanuda consumo abierto (sin re-reservar tope). "Finalizar consumo" ahora sticky `bottom-4`.
+- Nuevo `ActiveSessionBanner` en home: consumo en curso siempre visible con cronómetro y acumulado en vivo, linkea a `/consumo`.
+- API: `GET /api/sessions?user=<id>&active=1`.

@@ -23,16 +23,28 @@ export const fetchSessions = (activeOnly = false) =>
 export const fetchSession = (id: string) =>
   fetch(`/api/sessions/${id}`).then((r) => (r.ok ? json<StreamSession>(r) : null));
 
-export const createSession = (body: {
+export const createSession = async (body: {
+  userId: string;
   userName: string;
   maxCap: number;
   currency: Currency;
-}) =>
-  fetch('/api/sessions', {
+}): Promise<{ session: StreamSession; resumed: boolean }> => {
+  const r = await fetch('/api/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  }).then(json<StreamSession>);
+  });
+  const data = await r.json();
+  // 409 → the user already has an open consumption; resume that one.
+  if (!r.ok && data.session) return { session: data.session, resumed: true };
+  if (!r.ok) throw new Error(data.error ?? 'session_error');
+  return { session: data, resumed: false };
+};
+
+export const fetchMyActiveSession = (userId: string) =>
+  fetch(`/api/sessions?user=${encodeURIComponent(userId)}&active=1`)
+    .then(json<StreamSession[]>)
+    .then((s) => s[0] ?? null);
 
 export const closeSession = (id: string, totalPaid: number) =>
   fetch(`/api/sessions/${id}`, {

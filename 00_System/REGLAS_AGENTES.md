@@ -55,6 +55,7 @@ Al finalizar cada sesión o resolver un inconveniente técnico, el agente debe a
 - [Perfil Fiat Integrations](Agents/04_Fiat_Integrations_Agent.md)
 - [Perfil QA Testing & Demo](Agents/05_QA_Testing_Demo_Director_Agent.md)
 - [Perfil Agente Orquestador (reserva)](Agents/06_Agent_Orchestrator_Agent.md)
+- [Perfil Market Strategy & Pitch](Agents/07_Market_Strategy_Agent.md)
 - [Guía Monad EVM](Skills/monad_parallel_evm_guide.md)
 - [Guía Web3 Invisible UX](Skills/web3_invisible_ux_rules.md)
 - [Guía Fiat ARS Ramps](Skills/fiat_ars_ramps_simulation.md)

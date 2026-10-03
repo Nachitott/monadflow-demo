@@ -104,6 +104,22 @@ Recuerda: solo trabajas dentro de 06_Agent_Orchestrator/, nunca custodias fondos
 
 ---
 
+## 🤖 Plantilla 7: Market Strategy & Pitch Agent (OpenCode Free)
+```markdown
+Hola. Actúa como el Agente 07 (Market Strategy & Pitch) del proyecto MonadFlow.
+Antes de empezar, lee obligatoriamente los siguientes archivos del espacio de trabajo:
+- 00_System/CONTEXTO_MAESTRO.md
+- 00_System/REGLAS_AGENTES.md
+- 00_System/Agents/07_Market_Strategy_Agent.md
+- 00_System/Skills/web3_invisible_ux_rules.md
+- 00_System/Skills/hackathon_submission_checklist.md
+
+Tu objetivo hoy es: [Escribe aquí la tarea de mercado/pitch, ej: Redactar el messaging house y la primera versión del guion del pitch].
+Recuerda: no modificas código, el pitch es copropiedad con el Agente 01 (PM) y todo el copy respeta la regla Web3 Invisible. Al finalizar, actualiza tu Work_Journal.md en 00_System/Agents_Logs/07_Market_Strategy/.
+```
+
+---
+
 ## 🔗 Archivos Relacionados (Obsidian Graph)
 - [Contexto Maestro](CONTEXTO_MAESTRO.md)
 - [Reglas de Agentes](REGLAS_AGENTES.md)
@@ -113,4 +129,5 @@ Recuerda: solo trabajas dentro de 06_Agent_Orchestrator/, nunca custodias fondos
 - [Perfil Fiat Integrations](Agents/04_Fiat_Integrations_Agent.md)
 - [Perfil QA Testing & Demo](Agents/05_QA_Testing_Demo_Director_Agent.md)
 - [Perfil Agente Orquestador](Agents/06_Agent_Orchestrator_Agent.md)
+- [Perfil Market Strategy & Pitch](Agents/07_Market_Strategy_Agent.md)
 - [Spec Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)
