@@ -6,6 +6,7 @@ export interface StreamSession {
   id: string;
   merchantName: string;
   userName: string;
+  merchantQrId?: string;
   startTime: number; // unix ms
   ratePerSecond: number; // in `currency` units
   currency: Currency;
@@ -42,7 +43,12 @@ export function startSession(
     ended: false,
   };
   write([...read(), session]);
+  window.dispatchEvent(new Event('monadflow:storage'));
   return session;
+}
+
+export function getSession(id: string): StreamSession | undefined {
+  return read().find((s) => s.id === id);
 }
 
 export function endSession(id: string, totalPaid: number): void {
@@ -51,6 +57,22 @@ export function endSession(id: string, totalPaid: number): void {
       s.id === id ? { ...s, ended: true, endTime: Date.now(), totalPaid } : s,
     ),
   );
+  window.dispatchEvent(new Event('monadflow:storage'));
+}
+
+/** Closes every active session, charging what was accrued so far.
+ *  Called when the merchant generates a brand-new QR code. */
+export function endAllActiveSessions(): number {
+  const now = Date.now();
+  const all = read();
+  const closed = all.filter((s) => !s.ended).length;
+  write(
+    all.map((s) =>
+      s.ended ? s : { ...s, ended: true, endTime: now, totalPaid: accruedAmount(s, now) },
+    ),
+  );
+  window.dispatchEvent(new Event('monadflow:storage'));
+  return closed;
 }
 
 export function accruedAmount(s: StreamSession, now = Date.now()): number {
@@ -70,8 +92,11 @@ export function onSessionsChange(cb: () => void): () => void {
   };
 }
 
-/** Seed two demo customers so the merchant dashboard isn't empty in the demo. */
+/** Seed two demo customers so the merchant dashboard isn't empty in the demo.
+ *  Runs only once ever — regenerating the QR must leave the grid clean. */
 export function seedDemoSessions(): void {
+  if (localStorage.getItem('monadflow:demo-seeded')) return;
+  localStorage.setItem('monadflow:demo-seeded', '1');
   if (read().some((s) => !s.ended)) return;
   const now = Date.now();
   write([
