@@ -7,7 +7,9 @@ import { useState } from 'react';
 import { wagmiConfig } from '@/lib/wagmi';
 import { monadTestnet } from '@/lib/chains';
 
-const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? '';
+// Public client ID — safe to embed; env var overrides it if set.
+const PRIVY_APP_ID =
+  process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? 'cmushdamr01980did8zgf3lcq';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
