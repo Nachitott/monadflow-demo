@@ -3,7 +3,7 @@
 ## 🎯 Prioridad y Estado General
 - [x] Fase 1: Setup del Proyecto, Web3 Core (Privy/Wagmi) y UI Base
 - [x] Fase 2: Autenticación Invisible y Widget Simulador Fiat (ARS/USD)
-- [ ] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
+- [x] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
 - [ ] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
 - [ ] Fase 5: Conexión con Smart Contracts y Animaciones en Tiempo Real
 
@@ -32,17 +32,17 @@
 
 ---
 
-## ⏱️ Fase 3: Modo 1 (Pay-per-use Stream)
-- [ ] **Vista Cliente (Consumidor):**
-  - Componente Escáner QR / Lectura de enlace de comercio.
-  - Formulario de ajuste de límite máximo (`Auto-cap`) en ARS/USD antes de iniciar.
-  - Pantalla de sesión activa con contador dinámico en vivo (usando GSAP o Anime.js) que incrementa segundos y monto acumulado en tiempo real.
-  - Botón "Finalizar Consumo" con confirmación instantánea en 1-clic.
-- [ ] **Vista Comercio (Live Merchant Dashboard):**
+## ⏱️ Fase 3: Modo 1 (Pay-per-use Stream) ✅
+- [x] **Vista Cliente (Consumidor):** → `/consumo`
+  - Componente Escáner QR / Lectura de enlace de comercio (resuelve `?m=<qrId>` generado por el comercio).
+  - Formulario de ajuste de límite máximo (`Auto-cap`) en ARS antes de iniciar (valida saldo).
+  - Pantalla de sesión activa con contador dinámico en vivo (`LiveStreamTimer`, tick 250ms) que incrementa segundos y monto acumulado en tiempo real + barra de progreso del cap.
+  - Botón "Finalizar Consumo" con confirmación instantánea en 1-clic → `StreamSummaryCard` con devolución del saldo no usado.
+- [x] **Vista Comercio (Live Merchant Dashboard):** → `/comercio`
   - Grilla responsiva con tarjetas de clientes activos, minutos transcurridos y gasto parcial.
   - Controles de frecuencia de actualización (1m, 5m, 15m, Manual 🔄).
-  - Botón de **Killswitch**: Desactiva visualmente la recepción de nuevos clientes via QR.
-  - Modal exportable de "Reporte de Cierre Diario" (Resumen de ingresos totales y clientes atendidos).
+  - QR real del comercio (`qrcode.react`, link `/consumo?m=<qrId>`) + **Killswitch** que desactiva el código y opción de **generar código nuevo desde cero** (`MerchantKillswitchModal` + `lib/merchant.ts`).
+  - Modal exportable de "Reporte de Cierre Diario" (CSV real descargable).
 
 ---
 
