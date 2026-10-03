@@ -16,15 +16,15 @@ import LiveStreamTimer from '@/components/stream/LiveStreamTimer';
 import QRScanner from '@/components/stream/QRScanner';
 import StreamSummaryCard from '@/components/stream/StreamSummaryCard';
 import { useBalances } from '@/lib/BalanceContext';
-import { getMerchant, type Merchant } from '@/lib/merchant';
 import {
   accruedAmount,
-  getSession,
-  onSessionsChange,
-  startSession,
-  endSession,
+  closeSession,
+  createSession,
+  fetchMerchant,
+  fetchSession,
+  type Merchant,
   type StreamSession,
-} from '@/lib/streamSessions';
+} from '@/lib/api';
 import { formatAmount } from '@/lib/useExchangeRate';
 
 const QUICK_CAPS = [3000, 5000, 10000];
@@ -49,12 +49,13 @@ export default function ConsumoPage() {
   // Resolve merchant once authenticated (direct QR link or manual scan).
   useEffect(() => {
     if (!ready || !authenticated || merchant) return;
-    const m = getMerchant();
-    setMerchant(m);
-    if (scannedCode && (m.qrId !== scannedCode || !m.active)) {
-      setBlocked(true);
-      setStep('scan');
-    }
+    fetchMerchant().then((m) => {
+      setMerchant(m);
+      if (scannedCode && (m.qrId !== scannedCode || !m.active)) {
+        setBlocked(true);
+        setStep('scan');
+      }
+    });
   }, [ready, authenticated, merchant, scannedCode]);
 
   if (!ready) {
@@ -77,8 +78,8 @@ export default function ConsumoPage() {
   const capValid = cap > 0;
   const enoughBalance = balances.ARS >= cap;
 
-  const resolveMerchant = (code: string | null) => {
-    const m = getMerchant();
+  const resolveMerchant = async (code: string | null) => {
+    const m = await fetchMerchant();
     setMerchant(m);
     setScanning(false);
     if (!m.active || (code && m.qrId !== code)) setBlocked(true);
@@ -88,24 +89,23 @@ export default function ConsumoPage() {
   const handleScanResult = (code: string) => resolveMerchant(code);
   const handleManualEntry = () => resolveMerchant(null);
 
-  // If the merchant regenerates the QR, our session gets closed from
-  // the dashboard — finish the flow locally and refund the unused cap.
+  // If the merchant regenerates the QR, the server closes our session —
+  // poll its state and finish locally, refunding the unused cap.
   useEffect(() => {
     if (step !== 'active' || !session) return;
-    return onSessionsChange(() => {
-      if (getSession(session.id)?.ended) handleFinish();
-    });
+    const id = setInterval(async () => {
+      const s = await fetchSession(session.id);
+      if (s?.ended) handleFinish();
+    }, 2_000);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, session]);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (!capValid || !enoughBalance || !merchant) return;
-    const s = startSession({
-      merchantName: merchant.name,
-      merchantQrId: merchant.qrId,
+    const s = await createSession({
       userName:
         user?.google?.name ?? user?.apple?.email ?? user?.email?.address ?? 'Cliente',
-      ratePerSecond: merchant.ratePerMinute / 60,
       currency: 'ARS',
       maxCap: cap,
     });
@@ -120,7 +120,7 @@ export default function ConsumoPage() {
     const paid = accruedAmount(session);
     const secs = (Date.now() - session.startTime) / 1000;
     const refunded = session.maxCap - paid;
-    endSession(session.id, paid);
+    closeSession(session.id, paid);
     updateBalance(refunded, 'ARS');
     setFinish({ paid, refunded, secs });
     setStep('summary');

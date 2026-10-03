@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowLeft,
+  Check,
   Clock,
   FileDown,
+  Pencil,
   Power,
   PowerOff,
   QrCode,
@@ -16,25 +18,16 @@ import {
 } from 'lucide-react';
 import MerchantKillswitchModal from '@/components/stream/MerchantKillswitchModal';
 import {
-  deactivateQr,
-  getMerchant,
-  qrLink,
-  regenerateQr,
-  type Merchant,
-} from '@/lib/merchant';
-import {
   accruedAmount,
-  activeSessions,
-  endAllActiveSessions,
-  listSessions,
-  onSessionsChange,
-  seedDemoSessions,
+  fetchMerchant,
+  fetchSessions,
+  merchantAction,
+  type Merchant,
   type StreamSession,
-} from '@/lib/streamSessions';
+} from '@/lib/api';
+import { qrLink } from '@/lib/merchant';
 import { formatDuration } from '@/lib/useTimeStreamTimer';
 import { formatAmount } from '@/lib/useExchangeRate';
-
-const MERCHANT = 'Cowork Central';
 
 const REFRESH_OPTIONS = [
   { label: '1 min', ms: 60_000 },
@@ -45,31 +38,36 @@ const REFRESH_OPTIONS = [
 
 export default function ComercioPage() {
   const [sessions, setSessions] = useState<StreamSession[]>([]);
+  const [allSessions, setAllSessions] = useState<StreamSession[]>([]);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [refreshMs, setRefreshMs] = useState<number>(60_000);
   const [origin, setOrigin] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const nameRef = useRef<HTMLInputElement>(null);
 
   const off = merchant ? !merchant.active : false;
 
-  const reload = useCallback(() => {
-    setSessions(activeSessions());
-    setMerchant(getMerchant());
+  const reload = useCallback(async () => {
+    const [m, actives, all] = await Promise.all([
+      fetchMerchant(),
+      fetchSessions(true),
+      fetchSessions(false),
+    ]);
+    setMerchant(m);
+    setSessions(actives);
+    setAllSessions(all);
     setOrigin(window.location.origin);
   }, []);
 
   useEffect(() => {
-    seedDemoSessions();
     reload();
-    const unsub = onSessionsChange(reload);
-    // Light 1s tick keeps counters alive; the selector controls the
-    // heavier "data refresh" cadence, matching the spec (1m/5m/15m/Manual).
-    const tick = setInterval(reload, 1_000);
-    return () => {
-      unsub();
-      clearInterval(tick);
-    };
+    // Light 2s poll keeps counters + shared state fresh; the selector
+    // controls the configured cadence (1m/5m/15m/Manual).
+    const tick = setInterval(reload, 2_000);
+    return () => clearInterval(tick);
   }, [reload]);
 
   useEffect(() => {
@@ -78,15 +76,20 @@ export default function ComercioPage() {
     return () => clearInterval(id);
   }, [refreshMs, reload]);
 
-  // A brand-new code also closes every open session — each client is
-  // charged only for what they consumed and their held balance is freed.
-  const handleNewQr = () => {
-    endAllActiveSessions();
-    setMerchant(regenerateQr());
+  const handleNewQr = async () => {
+    setMerchant(await merchantAction({ action: 'regenerate' }));
+    reload();
+  };
+
+  const saveName = async () => {
+    setEditingName(false);
+    if (nameInput.trim()) {
+      setMerchant(await merchantAction({ action: 'update', name: nameInput }));
+    }
   };
 
   const today = new Date().toDateString();
-  const todays = listSessions().filter(
+  const todays = allSessions.filter(
     (s) => new Date(s.startTime).toDateString() === today,
   );
   const totalRevenue = todays.reduce(
@@ -122,8 +125,35 @@ export default function ComercioPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">{MERCHANT}</h1>
-          <p className="text-xs text-slate-400">Panel del establecimiento</p>
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={nameRef}
+                autoFocus
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && saveName()}
+                className="w-40 rounded-lg border border-indigo-500 bg-slate-950 px-2 py-1 text-xl font-semibold outline-none"
+              />
+              <button onClick={saveName} aria-label="Guardar nombre" className="text-emerald-400">
+                <Check className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setNameInput(merchant?.name ?? '');
+                setEditingName(true);
+              }}
+              className="group flex items-center gap-2"
+            >
+              <h1 className="text-xl font-semibold">{merchant?.name ?? '…'}</h1>
+              <Pencil className="h-3.5 w-3.5 text-slate-500 group-hover:text-slate-300" />
+            </button>
+          )}
+          <p className="text-xs text-slate-400">
+            Panel del establecimiento · {merchant && formatAmount(merchant.ratePerMinute, 'ARS')}/min
+          </p>
         </div>
         {off ? (
           <span className="flex items-center gap-1 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-medium text-rose-400">
@@ -234,8 +264,8 @@ export default function ComercioPage() {
           </div>
           <div className="relative mx-auto mt-3 w-fit rounded-xl bg-white p-3">
             <QRCodeSVG
-              value={qrLink(merchant, origin || 'https://monadflowapp.vercel.app')}
-              size={160}
+              value={qrLink(merchant, origin || '')}
+              size={200}
               level="M"
             />
             {off && (
@@ -261,11 +291,11 @@ export default function ComercioPage() {
       )}
 
       <MerchantKillswitchModal
-        merchantName={merchant?.name ?? MERCHANT}
+        merchantName={merchant?.name ?? 'el comercio'}
         isOpen={confirmOff}
         onClose={() => setConfirmOff(false)}
-        onConfirmDeactivation={() => {
-          setMerchant(deactivateQr());
+        onConfirmDeactivation={async () => {
+          setMerchant(await merchantAction({ action: 'deactivate' }));
           setConfirmOff(false);
         }}
       />

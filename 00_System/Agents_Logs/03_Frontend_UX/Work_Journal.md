@@ -16,3 +16,12 @@ BitÃ¡cora de trabajo para este perfil.
 - **Fase 2 completada:** `useExchangeRate` (cotización simulada ARS↔USD, refresco 30s), `BalanceCard` con selector de moneda, `FiatRampModal` (Mercado Pago/CVU, acreditación optimista 1.2s), saldos duales ARS+USD en dashboard. Build limpio; pusheado a `feat/frontend-app` y mergeado a `main` (redeploy automático en Vercel).
 
 * [Volver al Contexto Maestro](../../CONTEXTO_MAESTRO.md)
+
+## 2026-10-04 — Agente 03 (Frontend UX) — Fix cross-device QR (Fase 3 hardening)
+- **Bug:** QR del comercio rechazado como inválido al escanear desde otro dispositivo. Causa: estado en localStorage (por dispositivo) — el celular generaba su propio `qrId` y fallaba la validación.
+- **Solución:** estado compartido server-side in-memory — `lib/server/store.ts` + API routes `/api/merchant`, `/api/sessions`, `/api/sessions/[id]`. Cliente en `lib/api.ts`; `merchant.ts`/`streamSessions.ts` reducidos a shim/tipos. Polling 2s en `/comercio` (sesiones+merchant) y en `/consumo` (cierre remoto de sesión al regenerar QR).
+- Regenerar QR: invalida el anterior, cierra todas las sesiones activas server-side (cobra lo consumido) y el cliente ve su resumen con devolución automáticamente.
+- Primera interacción limpia: sin seed de clientes demo ni "Cowork Central" (nombre default "Mi comercio", editable desde el panel).
+- `QRScanner` agrandado (h-80, max-w-sm, qrbox 260px).
+- Verificado: build limpio; API end-to-end (POST sesión → regenerate → sesión cerrada con `totalPaid`); `/`, `/consumo`, `/comercio` 200.
+- Nota: el store in-memory cubre la demo en un mismo proceso (incluye Vercel single-instance en dev); no es persistencia durable multi-instancia — Fase 5 lo reemplaza por estado on-chain.

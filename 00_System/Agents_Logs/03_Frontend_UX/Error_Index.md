@@ -12,3 +12,7 @@ Registro de errores y soluciones.
 6. **Dev server 500 recurrente: `webpack-runtime.js TypeError 'call'`** — correr `npm run build` mientras `npm run dev` está vivo corrompe `.next` (comparten el directorio). **Solución:** matar dev → `rm -rf .next` → reiniciar. Regla: nunca buildear con el dev server corriendo.
 
 * [Volver al Contexto Maestro](../../CONTEXTO_MAESTRO.md)
+
+## 2026-10-04 — Fase 3 cross-device
+1. **QR "inválido" al escanear desde otro dispositivo** — `getMerchant()` usaba localStorage por dispositivo; el escáner resolvía un `qrId` distinto al generado en la PC. **Solución:** store compartido en memoria del server (`src/lib/server/store.ts`) consumido vía API routes; toda validación de `qrId` y ciclo de vida de sesiones pasó a server-side.
+2. **Sesiones zombies tras regenerar QR** — los clientes activos seguían corriendo con el código viejo. **Solución:** `merchant.action=regenerate` cierra todas las sesiones activas server-side computando `totalPaid` por tiempo transcurrido; `/consumo` hace polling de su sesión y muestra el resumen con devolución.

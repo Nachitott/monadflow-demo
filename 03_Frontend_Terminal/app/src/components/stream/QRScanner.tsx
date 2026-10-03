@@ -39,7 +39,7 @@ export default function QRScanner({ onResult, onCancel }: Props) {
         scanner = s;
         await s.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          { fps: 10, qrbox: { width: 260, height: 260 } },
           (text) => {
             const code = extractCode(text);
             if (code && !done.current) {
@@ -63,7 +63,7 @@ export default function QRScanner({ onResult, onCancel }: Props) {
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
-      <div className="relative h-56 w-full max-w-xs overflow-hidden rounded-3xl border-2 border-emerald-500/50 bg-black">
+      <div className="relative h-80 w-full max-w-sm overflow-hidden rounded-3xl border-2 border-emerald-500/50 bg-black">
         {error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
             <CameraOff className="h-8 w-8 text-slate-500" />
