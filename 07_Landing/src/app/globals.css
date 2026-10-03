@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 antialiased;
+}
+
+@layer utilities {
+  /* Rejilla de fondo para las secciones con profundidad */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgb(148 163 184 / 0.07) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(148 163 184 / 0.07) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Texto con degradado violeta/neón para los titulares de marca */
+  .text-gradient {
+    @apply bg-gradient-to-br from-white via-indigo-200 to-purple-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-emerald {
+    @apply bg-gradient-to-br from-emerald-200 to-teal-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-cyan {
+    @apply bg-gradient-to-br from-cyan-200 to-sky-400 bg-clip-text text-transparent;
+  }
+
+  /* Anillo difuso para separar las tarjetas del fondo oscuro */
+  .ring-glow {
+    box-shadow:
+      0 0 0 1px rgb(148 163 184 / 0.08),
+      0 24px 60px -20px rgb(99 102 241 / 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
