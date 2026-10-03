@@ -1,0 +1,47 @@
+'use client';
+
+import { formatAmount, type Currency } from '@/lib/useExchangeRate';
+
+interface Props {
+  balanceARS: number;
+  balanceUSD: number;
+  activeCurrency: Currency;
+  onCurrencyToggle: (currency: Currency) => void;
+}
+
+export default function BalanceCard({
+  balanceARS,
+  balanceUSD,
+  activeCurrency,
+  onCurrencyToggle,
+}: Props) {
+  const display =
+    activeCurrency === 'ARS' ? formatAmount(balanceARS, 'ARS') : formatAmount(balanceUSD, 'USD');
+
+  return (
+    <div className="rounded-2xl bg-slate-900 p-6">
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-wide text-slate-400">Saldo disponible</p>
+        <div className="flex rounded-full border border-slate-700 p-0.5 text-xs font-medium">
+          {(['ARS', 'USD'] as const).map((c) => (
+            <button
+              key={c}
+              onClick={() => onCurrencyToggle(c)}
+              className={`rounded-full px-3 py-1 transition ${
+                activeCurrency === c
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {c === 'ARS' ? '$ ARS' : 'USD'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mt-2 font-mono text-4xl font-semibold text-slate-100">{display}</p>
+      <p className="mt-1 font-mono text-xs text-slate-500">
+        ≈ {activeCurrency === 'ARS' ? formatAmount(balanceUSD, 'USD') : formatAmount(balanceARS, 'ARS')}
+      </p>
+    </div>
+  );
+}
