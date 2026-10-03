@@ -43,6 +43,7 @@
   - Controles de frecuencia de actualización (1m, 5m, 15m, Manual 🔄).
   - QR real del comercio (`qrcode.react`, link `/consumo?m=<qrId>`) + **Killswitch** que desactiva el código y opción de **generar código nuevo desde cero** (`MerchantKillswitchModal` + `lib/merchant.ts`).
   - Modal exportable de "Reporte de Cierre Diario" (CSV real descargable).
+- [x] **Hardening cross-device:** estado compartido en API routes in-memory (`/api/merchant`, `/api/sessions`, `lib/server/store.ts` + `lib/api.ts`) — el QR generado en un dispositivo valida al escanearse desde otro. Regenerar QR cierra todas las sesiones activas (cliente recibe su resumen con devolución vía polling). Sin seeds/demo: primera interacción limpia, nombre de comercio editable. Escáner de cámara real agrandado (`html5-qrcode`).
 
 ---
 
