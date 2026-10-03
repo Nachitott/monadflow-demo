@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
-import { ArrowDownLeft, Loader2, QrCode, ShieldCheck } from 'lucide-react';
+import { ArrowDownLeft, Loader2, QrCode, Store } from 'lucide-react';
 import BalanceCard from '@/components/BalanceCard';
 import FiatRampModal from '@/components/FiatRampModal';
 import HeaderUserBar from '@/components/HeaderUserBar';
@@ -54,14 +55,20 @@ export default function Home() {
         </p>
 
         <div className="grid grid-cols-2 gap-4">
-          <button className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-emerald-500/50">
+          <Link
+            href="/consumo"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-emerald-500/50"
+          >
             <QrCode className="h-7 w-7 text-emerald-400" />
             <span className="text-sm font-medium">Pagar por tiempo</span>
-          </button>
-          <button className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-cyan-500/50">
-            <ShieldCheck className="h-7 w-7 text-cyan-400" />
-            <span className="text-sm font-medium">Proyectos por etapas</span>
-          </button>
+          </Link>
+          <Link
+            href="/comercio"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-cyan-500/50"
+          >
+            <Store className="h-7 w-7 text-cyan-400" />
+            <span className="text-sm font-medium">Soy comercio</span>
+          </Link>
         </div>
       </section>
 
