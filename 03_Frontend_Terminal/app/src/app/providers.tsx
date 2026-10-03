@@ -5,6 +5,7 @@ import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { wagmiConfig } from '@/lib/wagmi';
+import { BalanceProvider } from '@/lib/BalanceContext';
 import { monadTestnet } from '@/lib/chains';
 
 // Public client ID — safe to embed; env var overrides it if set.
@@ -34,7 +35,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
+        <WagmiProvider config={wagmiConfig}>
+          <BalanceProvider>{children}</BalanceProvider>
+        </WagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>
   );

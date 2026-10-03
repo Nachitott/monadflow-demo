@@ -7,14 +7,14 @@ import BalanceCard from '@/components/BalanceCard';
 import FiatRampModal from '@/components/FiatRampModal';
 import HeaderUserBar from '@/components/HeaderUserBar';
 import LoginScreen from '@/components/LoginScreen';
+import { useBalances } from '@/lib/BalanceContext';
 import { useExchangeRate, formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 export default function Home() {
   const { ready, authenticated } = usePrivy();
   const { rate, updatedAt } = useExchangeRate();
+  const { balances, updateBalance } = useBalances();
   const [currency, setCurrency] = useState<Currency>('ARS');
-  const [balanceARS, setBalanceARS] = useState(0);
-  const [balanceUSD, setBalanceUSD] = useState(0);
   const [rampOpen, setRampOpen] = useState(false);
 
   if (!ready) {
@@ -30,8 +30,7 @@ export default function Home() {
   }
 
   const handleDeposit = (amount: number, depositCurrency: Currency) => {
-    if (depositCurrency === 'ARS') setBalanceARS((b) => b + amount);
-    else setBalanceUSD((b) => b + amount);
+    updateBalance(amount, depositCurrency);
   };
 
   return (
@@ -39,8 +38,8 @@ export default function Home() {
       <HeaderUserBar />
       <section className="flex flex-1 flex-col gap-4 p-4">
         <BalanceCard
-          balanceARS={balanceARS}
-          balanceUSD={balanceUSD}
+          balanceARS={balances.ARS}
+          balanceUSD={balances.USD}
           activeCurrency={currency}
           onCurrencyToggle={setCurrency}
         />
