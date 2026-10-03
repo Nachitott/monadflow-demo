@@ -2,7 +2,7 @@
 
 ## 🎯 Prioridad y Estado General
 - [x] Fase 1: Setup del Proyecto, Web3 Core (Privy/Wagmi) y UI Base
-- [ ] Fase 2: Autenticación Invisible y Widget Simulador Fiat (ARS/USD)
+- [x] Fase 2: Autenticación Invisible y Widget Simulador Fiat (ARS/USD)
 - [ ] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
 - [ ] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
 - [ ] Fase 5: Conexión con Smart Contracts y Animaciones en Tiempo Real
@@ -22,13 +22,13 @@
 
 ---
 
-## 💵 Fase 2: Visualización Multimoneda & Simulación Fiat (ARS/USD)
-- [ ] **Ticker en Tiempo Real:**
-  - Selector en la barra superior para alternar visualización entre ARS ($) y USD (USDC).
-  - Hook `useExchangeRate` para refrescar cotización mediante el simulador fiat.
-- [ ] **Modal Simulador Mercado Pago / CVU:**
-  - Formulario desplegable para ingresar Pesos Argentinos (ARS).
-  - Botón "Cargar Saldo" con animación de procesamiento instantáneo que acrecienta el balance en la app.
+## 💵 Fase 2: Visualización Multimoneda & Simulación Fiat (ARS/USD) ✅
+- [x] **Ticker en Tiempo Real:**
+  - Selector para alternar visualización entre ARS ($) y USD → integrado en `BalanceCard.tsx`.
+  - Hook `useExchangeRate` → `src/lib/useExchangeRate.ts` (cotización simulada, refresco c/30s, conversión ARS↔USD, `formatAmount` es-AR).
+- [x] **Modal Simulador Mercado Pago / CVU:**
+  - Formulario desplegable para ingresar Pesos Argentinos (ARS) o USD → `FiatRampModal.tsx` (montos rápidos, alias `monadflow.mp`).
+  - Botón "Cargar Saldo" con animación de procesamiento instantáneo que acrecienta el balance → acreditación optimista en 1.2s, doble saldo ARS/USD en `page.tsx`.
 
 ---
 
