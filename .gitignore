@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env / secrets
+.env.local
+.env*.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.obsidian/workspace.json
+
+# Foundry
+02_SmartContracts_Terminal/out/
+02_SmartContracts_Terminal/cache/
