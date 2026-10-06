@@ -82,6 +82,14 @@ export default function AgreementDetailPage() {
   const isContractor = a.contractorId === user?.id;
   const stage0Paid = a.stages[0]?.approved;
   const currentReview = a.stages.findIndex((s) => s.deliveredAt && !s.approved);
+  const nextToAuthorize = a.stages.findIndex(
+    (s) => !s.approved && !s.authorizedAt,
+  );
+  // A work session = a stage authorized or under review that is not paid
+  // yet. While one exists, the agreement cannot be cancelled.
+  const workSessionActive = a.stages.some(
+    (s) => !s.approved && (s.authorizedAt || s.deliveredAt),
+  );
   const enoughBalance =
     (a.currency === 'ARS' ? balances.ARS : balances.USD) >= a.totalAmount;
 
@@ -196,17 +204,45 @@ export default function AgreementDetailPage() {
         </div>
       )}
 
-      {/* Client can also approve the next undelivered stage early? No —
-          spec: approve happens after delivery. Show cancel CTA. */}
+      {/* Client green light for the next stage — payment gets committed
+          while the contractor works on it. */}
+      {a.status === 'active' &&
+        isClient &&
+        currentReview === -1 &&
+        nextToAuthorize >= 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <p className="text-sm font-medium">
+              ¿Continuar con la etapa {nextToAuthorize + 1}?
+            </p>
+            <p className="mt-1 text-xs text-slate-400">
+              Al dar luz verde, el pago de esa etapa ({formatAmount(stageAmt, a.currency)})
+              queda comprometido y no podés cancelar hasta que se resuelva.
+            </p>
+            <button
+              onClick={async () => {
+                setAgreement(
+                  await agreementAction(a.id, { action: 'authorize-next' }),
+                );
+              }}
+              className="mt-3 w-full rounded-xl bg-sky-600 py-3 text-sm font-medium text-white transition hover:bg-sky-500"
+            >
+              Dar luz verde para la etapa {nextToAuthorize + 1}
+            </button>
+          </div>
+        )}
+
+      {/* Cancel CTA — only between work sessions */}
       {a.status === 'active' && isClient && (
         <button
           onClick={() => setCancelOpen(true)}
-          disabled={!stage0Paid}
+          disabled={!stage0Paid || workSessionActive}
           className="mt-4 w-full rounded-xl border border-rose-700/60 py-3 text-sm font-medium text-rose-400 transition enabled:hover:bg-rose-950/40 disabled:opacity-40"
         >
-          {stage0Paid
-            ? 'Cancelar proyecto'
-            : 'Cancelación disponible después de liberar la etapa 1'}
+          {!stage0Paid
+            ? 'Cancelación disponible después de liberar la etapa 1'
+            : workSessionActive
+              ? 'Cancelación disponible al resolver la etapa en curso'
+              : 'Cancelar proyecto'}
         </button>
       )}
 

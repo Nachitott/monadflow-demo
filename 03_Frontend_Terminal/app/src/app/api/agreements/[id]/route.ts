@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgreement, saveAgreement } from '@/lib/server/store';
+import {
+  deleteAgreement,
+  getAgreement,
+  saveAgreement,
+} from '@/lib/server/store';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +70,20 @@ export async function POST(
         return NextResponse.json({ error: 'link_inactive' }, { status: 409 });
       a.clientId = String(body.clientId ?? 'anon').slice(0, 80);
       a.clientName = String(body.clientName ?? 'Cliente').slice(0, 40);
+      // The 100% deposit IS the green light for stage 1.
+      a.stages[0].authorizedAt = Date.now();
       a.status = 'active';
+      break;
+    }
+    case 'authorize-next': {
+      // Client green light to work on the next stage — its payment is
+      // committed until that stage is resolved.
+      if (a.status !== 'active')
+        return NextResponse.json({ error: 'not_active' }, { status: 409 });
+      const next = a.stages.find((s) => !s.approved && !s.authorizedAt);
+      if (!next)
+        return NextResponse.json({ error: 'nothing_to_authorize' }, { status: 400 });
+      next.authorizedAt = Date.now();
       break;
     }
     case 'deliver': {
@@ -76,6 +93,11 @@ export async function POST(
       const s = a.stages[i];
       if (!s || s.approved || s.deliveredAt)
         return NextResponse.json({ error: 'invalid_stage' }, { status: 400 });
+      if (!s.authorizedAt)
+        return NextResponse.json(
+          { error: 'stage_not_authorized' },
+          { status: 403 },
+        );
       s.deliveredAt = Date.now();
       break;
     }
@@ -92,14 +114,31 @@ export async function POST(
       break;
     }
     case 'cancel': {
-      // Cancellation is only enabled after stage 0 was paid.
+      // Cancellation is only enabled after stage 0 was paid AND between
+      // work sessions — never while a stage is authorized or under review.
       if (a.status !== 'active')
         return NextResponse.json({ error: 'not_cancellable' }, { status: 409 });
       if (!a.stages[0]?.approved)
         return NextResponse.json({ error: 'stage0_locked' }, { status: 409 });
+      const inProgress = a.stages.some(
+        (s) => !s.approved && (s.authorizedAt || s.deliveredAt),
+      );
+      if (inProgress)
+        return NextResponse.json(
+          { error: 'work_session_active' },
+          { status: 409 },
+        );
       a.status = 'cancelled';
       a.cancelledAt = Date.now();
       break;
+    }
+    case 'delete': {
+      // Records can be removed before the deposit or once closed —
+      // never while money is working.
+      if (a.status === 'active')
+        return NextResponse.json({ error: 'still_active' }, { status: 409 });
+      await deleteAgreement(params.id);
+      return NextResponse.json({ deleted: true });
     }
     default:
       return NextResponse.json({ error: 'unknown action' }, { status: 400 });
