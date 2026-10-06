@@ -6,12 +6,16 @@ import { usePrivy } from '@privy-io/react-auth';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   FileSignature,
+  Hourglass,
   Loader2,
   PackageCheck,
   Power,
   PowerOff,
   QrCode,
+  Trash2,
   X,
 } from 'lucide-react';
 import {
@@ -30,10 +34,15 @@ const STATUS_LABEL: Record<Agreement['status'], { text: string; cls: string }> =
   cancelled: { text: 'Cancelado', cls: 'bg-slate-700/40 text-slate-400' },
 };
 
+type Tab = 'mine' | 'client';
+
 export default function AcuerdoPage() {
   const { ready, authenticated, user } = usePrivy();
-  const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [tab, setTab] = useState<Tab>('mine');
+  const [mine, setMine] = useState<Agreement[]>([]);
+  const [asClient, setAsClient] = useState<Agreement[]>([]);
   const [creating, setCreating] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [origin, setOrigin] = useState('');
 
   // wizard state
@@ -48,7 +57,12 @@ export default function AcuerdoPage() {
 
   const reload = useCallback(async () => {
     if (!user?.id) return;
-    setAgreements(await fetchAgreements({ contractor: user.id }));
+    const [m, c] = await Promise.all([
+      fetchAgreements({ contractor: user.id }),
+      fetchAgreements({ client: user.id }),
+    ]);
+    setMine(m);
+    setAsClient(c);
     setOrigin(window.location.origin);
   }, [user?.id]);
 
@@ -96,8 +110,123 @@ export default function AcuerdoPage() {
     reload();
   };
 
-  const nextUndelivered = (a: Agreement) =>
+  const remove = async (a: Agreement) => {
+    await fetch(`/api/agreements/${a.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete' }),
+    });
+    reload();
+  };
+
+  /** Stage the contractor would deliver next (needs client green light). */
+  const nextDeliverable = (a: Agreement) =>
     a.stages.findIndex((s) => !s.approved && !s.deliveredAt);
+
+  const list = tab === 'mine' ? mine : asClient;
+  const ongoing = list.filter((a) => a.status === 'pending' || a.status === 'active');
+  const history = list.filter((a) => a.status === 'completed' || a.status === 'cancelled');
+
+  const card = (a: Agreement) => {
+    const st = STATUS_LABEL[a.status];
+    const nextIdx = nextDeliverable(a);
+    const next = nextIdx >= 0 ? a.stages[nextIdx] : undefined;
+    const canDelete = a.status !== 'active';
+    return (
+      <div key={a.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <div className="flex items-center justify-between">
+          <p className="font-medium">{a.title}</p>
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>
+              {st.text}
+            </span>
+            {canDelete && (
+              <button
+                onClick={() => remove(a)}
+                aria-label="Eliminar acuerdo"
+                className="text-slate-500 transition hover:text-rose-400"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="mt-1 font-mono text-xs text-slate-400">
+          {formatAmount(a.totalAmount, a.currency)} · {a.stageCount} etapas de{' '}
+          {formatAmount(stageAmountOf(a), a.currency)}
+          {a.clientName ? ` · Cliente: ${a.clientName}` : ''}
+        </p>
+
+        {/* QR / link to share with the client (pre-deposit) */}
+        {a.status === 'pending' && tab === 'mine' && (
+          <div className="mt-3">
+            {a.linkActive ? (
+              <>
+                <div className="mx-auto w-fit rounded-xl bg-white p-2.5">
+                  <QRCodeSVG value={`${origin}/acuerdo/${a.id}`} size={140} level="M" />
+                </div>
+                <p className="mt-2 flex items-center justify-center gap-1 text-center text-[11px] text-slate-500">
+                  <QrCode className="h-3 w-3" /> El cliente lo escanea para depositar.
+                </p>
+                <button
+                  onClick={async () => {
+                    await agreementAction(a.id, { action: 'deactivate-link' });
+                    reload();
+                  }}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-700/60 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/40"
+                >
+                  <PowerOff className="h-3.5 w-3.5" /> Desactivar enlace
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={async () => {
+                  await agreementAction(a.id, { action: 'reactivate-link' });
+                  reload();
+                }}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-700/60 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-950/40"
+              >
+                <Power className="h-3.5 w-3.5" /> Reactivar enlace
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Contractor delivers the current stage — only with green light */}
+        {a.status === 'active' && tab === 'mine' && nextIdx >= 0 && next && (
+          next.authorizedAt ? (
+            <button
+              onClick={async () => {
+                await agreementAction(a.id, { action: 'deliver', stageIndex: nextIdx });
+                reload();
+              }}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2.5 text-xs font-medium text-white hover:bg-sky-500"
+            >
+              <PackageCheck className="h-4 w-4" />
+              Entregar etapa {nextIdx + 1}
+            </button>
+          ) : (
+            <p className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700 py-2.5 text-xs text-slate-500">
+              <Hourglass className="h-3.5 w-3.5" />
+              Esperando luz verde del cliente para la etapa {nextIdx + 1}
+            </p>
+          )
+        )}
+        {a.status === 'active' && tab === 'mine' && nextIdx === -1 && (
+          <p className="mt-3 text-center text-xs text-slate-500">
+            Todas las etapas entregadas — esperando aprobación del cliente.
+          </p>
+        )}
+
+        <Link
+          href={`/acuerdo/${a.id}`}
+          className="mt-3 block text-center text-xs text-cyan-400 underline hover:text-cyan-300"
+        >
+          Ver detalle del acuerdo
+        </Link>
+      </div>
+    );
+  };
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col p-4">
@@ -112,7 +241,7 @@ export default function AcuerdoPage() {
             Cobros garantizados — el cliente deposita el 100% antes de empezar.
           </p>
         </div>
-        {!creating && (
+        {!creating && tab === 'mine' && (
           <button
             onClick={() => setCreating(true)}
             className="flex items-center gap-1.5 rounded-xl bg-cyan-600 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-500"
@@ -120,6 +249,26 @@ export default function AcuerdoPage() {
             <FileSignature className="h-4 w-4" /> Nuevo
           </button>
         )}
+      </div>
+
+      {/* Role tabs */}
+      <div className="mt-4 flex rounded-xl border border-slate-800 p-0.5 text-sm">
+        {(
+          [
+            ['mine', 'Creados por mí'],
+            ['client', 'Como cliente'],
+          ] as const
+        ).map(([t, label]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-lg py-2 transition ${
+              tab === t ? 'bg-slate-800 text-slate-100' : 'text-slate-500'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Creation wizard */}
@@ -197,8 +346,8 @@ export default function AcuerdoPage() {
               <span className="font-mono text-cyan-300">
                 {formatAmount(totalNum / stageNum, currency)}
               </span>{' '}
-              cada una. El cliente deposita el 100% por adelantado; la primera
-              etapa queda garantizada y las liberaciones son en 1-clic.
+              cada una. El cliente deposita el 100% por adelantado y habilita
+              cada etapa nueva con su luz verde.
             </div>
           )}
 
@@ -212,96 +361,31 @@ export default function AcuerdoPage() {
         </div>
       )}
 
-      {/* Agreements list */}
+      {/* Ongoing agreements */}
       <div className="mt-4 space-y-3">
-        {agreements.map((a) => {
-          const st = STATUS_LABEL[a.status];
-          const nextIdx = nextUndelivered(a);
-          return (
-            <div key={a.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{a.title}</p>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>
-                  {st.text}
-                </span>
-              </div>
-              <p className="mt-1 font-mono text-xs text-slate-400">
-                {formatAmount(a.totalAmount, a.currency)} · {a.stageCount} etapas de{' '}
-                {formatAmount(stageAmountOf(a), a.currency)}
-                {a.clientName ? ` · Cliente: ${a.clientName}` : ''}
-              </p>
-
-              {/* QR / link to share with the client (pre-deposit) */}
-              {a.status === 'pending' && (
-                <div className="mt-3">
-                  {a.linkActive ? (
-                    <>
-                      <div className="mx-auto w-fit rounded-xl bg-white p-2.5">
-                        <QRCodeSVG value={`${origin}/acuerdo/${a.id}`} size={140} level="M" />
-                      </div>
-                      <p className="mt-2 flex items-center justify-center gap-1 text-center text-[11px] text-slate-500">
-                        <QrCode className="h-3 w-3" /> El cliente lo escanea para depositar.
-                      </p>
-                      <button
-                        onClick={async () => {
-                          await agreementAction(a.id, { action: 'deactivate-link' });
-                          reload();
-                        }}
-                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-700/60 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/40"
-                      >
-                        <PowerOff className="h-3.5 w-3.5" /> Desactivar enlace
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={async () => {
-                        await agreementAction(a.id, { action: 'reactivate-link' });
-                        reload();
-                      }}
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-700/60 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-950/40"
-                    >
-                      <Power className="h-3.5 w-3.5" /> Reactivar enlace
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Contractor marks the current stage as delivered */}
-              {a.status === 'active' && nextIdx >= 0 && (
-                <button
-                  onClick={async () => {
-                    await agreementAction(a.id, { action: 'deliver', stageIndex: nextIdx });
-                    reload();
-                  }}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2.5 text-xs font-medium text-white hover:bg-sky-500"
-                >
-                  <PackageCheck className="h-4 w-4" />
-                  Entregar etapa {nextIdx + 1}
-                </button>
-              )}
-              {a.status === 'active' && nextIdx === -1 && (
-                <p className="mt-3 text-center text-xs text-slate-500">
-                  Todas las etapas entregadas — esperando aprobación del cliente.
-                </p>
-              )}
-
-              {a.status !== 'pending' && (
-                <Link
-                  href={`/acuerdo/${a.id}`}
-                  className="mt-3 block text-center text-xs text-cyan-400 underline hover:text-cyan-300"
-                >
-                  Ver detalle del acuerdo
-                </Link>
-              )}
-            </div>
-          );
-        })}
-        {agreements.length === 0 && !creating && (
+        {ongoing.map(card)}
+        {ongoing.length === 0 && !creating && (
           <p className="rounded-2xl border border-dashed border-slate-800 p-6 text-center text-sm text-slate-500">
-            Todavía no creaste acuerdos. Empezá uno nuevo para recibir pagos por etapas.
+            {tab === 'mine'
+              ? 'Todavía no creaste acuerdos. Empezá uno nuevo para recibir pagos por etapas.'
+              : 'No tenés acuerdos en curso como cliente.'}
           </p>
         )}
       </div>
+
+      {/* History */}
+      {history.length > 0 && (
+        <div className="mt-5">
+          <button
+            onClick={() => setHistoryOpen((o) => !o)}
+            className="flex w-full items-center justify-between rounded-xl border border-slate-800 px-3 py-2.5 text-xs uppercase tracking-wide text-slate-400 hover:text-slate-200"
+          >
+            Historial ({history.length})
+            {historyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          {historyOpen && <div className="mt-3 space-y-3">{history.map(card)}</div>}
+        </div>
+      )}
     </main>
   );
 }

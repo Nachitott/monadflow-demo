@@ -31,6 +31,8 @@ export interface SessionState {
 }
 
 export interface AgreementStage {
+  /** Client green light — required before the contractor can deliver. */
+  authorizedAt?: number;
   deliveredAt?: number;
   approved: boolean;
   paidAt?: number;
@@ -159,5 +161,16 @@ export const frozenAmount = (a: AgreementState): number =>
 
 export const makeAgreementId = () =>
   `ag-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+export async function deleteAgreement(id: string): Promise<boolean> {
+  const agreements = kvEnabled()
+    ? ((await kvGetJson<AgreementState[]>(K_AGREEMENTS)) ?? [])
+    : memStore().agreements;
+  const i = agreements.findIndex((x) => x.id === id);
+  if (i < 0) return false;
+  agreements.splice(i, 1);
+  if (kvEnabled()) await kvSetJson(K_AGREEMENTS, agreements);
+  return true;
+}
 
 export { newQrId, makeSessionId };

@@ -45,3 +45,10 @@ BitÃ¡cora de trabajo para este perfil.
 - `/acuerdo`: panel del contratista — wizard de creación con preview por hito, QR `/acuerdo/<id>`, killswitch de enlace, "Entregar etapa N".
 - `/acuerdo/[id]`: vista cliente — depósito del 100% (reserva de saldo), banner de custodia, aprobar en 1-clic sobre etapa entregada, cancelación con reembolso exacto de etapas no aprobadas. Timer de auto-aprobación visible.
 - Home: acceso "Acuerdos por etapas". Build limpio; flujo API end-to-end verificado (deposit → stage0_locked → approve → cancel); rutas 200.
+
+## 2026-10-05 — Agente 03 (Frontend UX) — Fase 4 hardening (luz verde + secciones)
+- Gate de continuación: `AgreementStage.authorizedAt` — `deposit` autoriza la etapa 1; `authorize-next` del cliente habilita la siguiente; `deliver` exige autorización (403 `stage_not_authorized`); `cancel` bloqueado mientras haya etapa autorizada/entregada sin aprobar (409 `work_session_active`).
+- `/acuerdo`: tabs "Creados por mí" / "Como cliente", historial colapsable por rol, eliminar (solo pending/completed/cancelled), "Entregar etapa" deshabilitado con "Esperando luz verde".
+- `/acuerdo/[id]`: tarjeta "Dar luz verde" con aviso de pago comprometido; copy de cancelación por estado (pre-etapa-1 / sesión de trabajo / disponible).
+- `MilestoneTracker`: badge "Autorizada" (ámbar, Lock).
+- Verificado end-to-end: 403 sin autorización, 409 con entrega en revisión, cancel entre etapas OK, delete en cerrado OK.

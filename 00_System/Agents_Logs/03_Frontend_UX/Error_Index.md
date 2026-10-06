@@ -21,3 +21,7 @@ Registro de errores y soluciones.
 6. **Re-escaneo del QR creaba sesiones paralelas** — no había dedup por usuario. **Solución:** `userId` en sesión + 409 con reanudación en `POST /api/sessions`; `/consumo` auto-reanuda al montar.
 7. **"Finalizar consumo" invisible en móvil** — mismo problema que el botón de iniciar. **Solución:** sticky `bottom-4`.
 8. **Consumo quedaba corriendo sin indicador** al volver al home. **Solución:** `ActiveSessionBanner` persistente con polling.
+
+## 2026-10-05 — Fase 4 hardening
+9. **Cancelación durante sesión de trabajo dejaba etapa sin pagar** — aprobar etapa N habilitaba de inmediato la entrega N+1 y el cliente podía cancelar con una entrega en revisión. **Solución:** estado `authorizedAt` por etapa; el cliente debe dar luz verde para cada etapa nueva y la cancelación solo es posible entre sesiones (`work_session_active`).
+10. **Cliente sin visibilidad de sus acuerdos** — `/acuerdo` solo listaba los creados por uno mismo. **Solución:** tabs por rol + historial compartido + eliminar en estados cerrados.

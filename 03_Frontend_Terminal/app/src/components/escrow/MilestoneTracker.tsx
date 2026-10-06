@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Circle, Clock, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Lock, ShieldCheck } from 'lucide-react';
 import type { Agreement } from '@/lib/api';
 import { stageAmountOf } from '@/lib/api';
 import { formatAmount } from '@/lib/useExchangeRate';
@@ -29,6 +29,12 @@ export default function MilestoneTracker({ agreement: a }: Props) {
       return (
         <span className="flex items-center gap-1 rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-medium text-cyan-400">
           <Clock className="h-3 w-3" /> En revisión
+        </span>
+      );
+    if (s.authorizedAt)
+      return (
+        <span className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
+          <Lock className="h-3 w-3" /> Autorizada
         </span>
       );
     if (i === approved)
