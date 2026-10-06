@@ -30,13 +30,39 @@ export interface SessionState {
   totalPaid?: number;
 }
 
+export interface AgreementStage {
+  deliveredAt?: number;
+  approved: boolean;
+  paidAt?: number;
+}
+
+export interface AgreementState {
+  id: string;
+  title: string;
+  totalAmount: number;
+  currency: Currency;
+  stageCount: number;
+  autoApproveDays: number; // 0 = disabled
+  contractorId: string;
+  contractorName: string;
+  clientId?: string;
+  clientName?: string;
+  linkActive: boolean; // killswitch (pre-deposit)
+  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  stages: AgreementStage[];
+  createdAt: number;
+  cancelledAt?: number;
+}
+
 interface Store {
   merchant: MerchantState;
   sessions: SessionState[];
+  agreements: AgreementState[];
 }
 
 const K_MERCHANT = 'mf:merchant';
 const K_SESSIONS = 'mf:sessions';
+const K_AGREEMENTS = 'mf:agreements';
 
 const newQrId = () =>
   `qr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -54,7 +80,9 @@ const freshMerchant = (): MerchantState => ({
 // ---- in-memory fallback (local dev without KV) ----
 const g = globalThis as unknown as { __monadflow?: Store };
 function memStore(): Store {
-  if (!g.__monadflow) g.__monadflow = { merchant: freshMerchant(), sessions: [] };
+  if (!g.__monadflow)
+    g.__monadflow = { merchant: freshMerchant(), sessions: [], agreements: [] };
+  if (!g.__monadflow.agreements) g.__monadflow.agreements = [];
   return g.__monadflow;
 }
 
@@ -100,5 +128,36 @@ export function accrued(s: SessionState, now = Date.now()): number {
   const end = s.ended && s.endTime ? s.endTime : now;
   return Math.min(Math.max(0, (end - s.startTime) / 1000) * s.ratePerSecond, s.maxCap);
 }
+
+// ---- Agreements (Modo 2) ----
+
+export async function listAgreements(): Promise<AgreementState[]> {
+  if (!kvEnabled()) return memStore().agreements;
+  return (await kvGetJson<AgreementState[]>(K_AGREEMENTS)) ?? [];
+}
+
+export async function getAgreement(id: string): Promise<AgreementState | undefined> {
+  return (await listAgreements()).find((a) => a.id === id);
+}
+
+export async function saveAgreement(a: AgreementState): Promise<void> {
+  const agreements = kvEnabled()
+    ? ((await kvGetJson<AgreementState[]>(K_AGREEMENTS)) ?? [])
+    : memStore().agreements;
+  const i = agreements.findIndex((x) => x.id === a.id);
+  if (i >= 0) agreements[i] = a;
+  else agreements.push(a);
+  if (kvEnabled()) await kvSetJson(K_AGREEMENTS, agreements);
+}
+
+export const stageAmount = (a: AgreementState): number =>
+  a.totalAmount / a.stageCount;
+
+/** Frozen amount = approved+pending stages still locked (everything not paid). */
+export const frozenAmount = (a: AgreementState): number =>
+  a.stages.filter((s) => !s.approved).length * stageAmount(a);
+
+export const makeAgreementId = () =>
+  `ag-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export { newQrId, makeSessionId };

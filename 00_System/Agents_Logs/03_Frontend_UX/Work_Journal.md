@@ -37,3 +37,11 @@ BitÃ¡cora de trabajo para este perfil.
 - `/consumo`: al montar, `fetchMyActiveSession(user.id)` reanuda consumo abierto (sin re-reservar tope). "Finalizar consumo" ahora sticky `bottom-4`.
 - Nuevo `ActiveSessionBanner` en home: consumo en curso siempre visible con cronómetro y acumulado en vivo, linkea a `/consumo`.
 - API: `GET /api/sessions?user=<id>&active=1`.
+
+## 2026-10-05 — Agente 03 (Frontend UX) — Fase 4 completada (Modo 2)
+- Modelo `AgreementState` en `lib/server/store.ts` (KV `mf:agreements`, fallback memoria): título, monto, moneda, N etapas (split parejo), auto-aprobación en días, killswitch de enlace pre-depósito, ciclo pending→active→completed/cancelled.
+- API: `POST /api/agreements` (crear), `GET /api/agreements?contractor|client`, `GET/POST /api/agreements/[id]` con acciones `deposit`, `deliver`, `approve`, `cancel`, `deactivate/reactivate-link`. Regla `stage0_locked`: cancelación solo tras liberar etapa 1. Auto-aprobación perezosa por `autoApproveDays` en cada GET/POST.
+- Componentes según spec: `components/escrow/{MilestoneTracker,ApproveStageButton,CancelEscrowModal}.tsx`.
+- `/acuerdo`: panel del contratista — wizard de creación con preview por hito, QR `/acuerdo/<id>`, killswitch de enlace, "Entregar etapa N".
+- `/acuerdo/[id]`: vista cliente — depósito del 100% (reserva de saldo), banner de custodia, aprobar en 1-clic sobre etapa entregada, cancelación con reembolso exacto de etapas no aprobadas. Timer de auto-aprobación visible.
+- Home: acceso "Acuerdos por etapas". Build limpio; flujo API end-to-end verificado (deposit → stage0_locked → approve → cancel); rutas 200.

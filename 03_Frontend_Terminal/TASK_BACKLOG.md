@@ -4,7 +4,7 @@
 - [x] Fase 1: Setup del Proyecto, Web3 Core (Privy/Wagmi) y UI Base
 - [x] Fase 2: Autenticación Invisible y Widget Simulador Fiat (ARS/USD)
 - [x] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
-- [ ] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
+- [x] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
 - [ ] Fase 5: Conexión con Smart Contracts y Animaciones en Tiempo Real
 
 ---
@@ -47,16 +47,19 @@
 
 ---
 
-## 📝 Fase 4: Modo 2 (Milestone-Lock Escrow)
-- [ ] **Creador de Contrato (Contratista):**
-  - Formulario paso a paso: Título, Monto Total, Cantidad de Etapas, Moneda (ARS/USD) y Días para Auto-Aprobación.
-  - Desglose interactivo con vista previa del monto por cada hito.
-  - Generación instantánea de enlace y código QR de cobro para enviar al cliente.
-- [ ] **Vista Cliente / Aprobador:**
-  - Tarjeta de estado de custodia: Muestra con indicador visual que el **100% del depósito está congelado y garantizado** en el contrato inteligente.
-  - Lista de etapas/hitos con badges de estado (`Pendiente`, `En Proceso`, `Completado`).
-  - Botón "Aprobar Etapa" (1-clic) para liberar los fondos de esa fracción.
-  - Botón "Cancelar Proyecto": Modal con desglose de reembolso del 100% sobre los fondos congelados no aprobados.
+## 📝 Fase 4: Modo 2 (Milestone-Lock Escrow) ✅
+- [x] **Creador de Contrato (Contratista):** → `/acuerdo`
+  - Formulario: Título, Monto Total, Cantidad de Etapas, Moneda (ARS/USD) y Días para Auto-Aprobación.
+  - Vista previa del monto por cada hito (split parejo) antes de crear.
+  - QR instantáneo (`qrcode.react`, link `/acuerdo/<id>`) + killswitch del enlace previo al depósito (desactivar/reactivar).
+  - Acción "Entregar etapa" por hito (activa el timer de auto-aprobación server-side).
+- [x] **Vista Cliente / Aprobador:** → `/acuerdo/[id]`
+  - `MilestoneTracker`: banner de custodia ("$X protegidos en el fondo de garantía") + lista de etapas con badges (`Completado`, `En revisión`, `En proceso`, `Pendiente`).
+  - `ApproveStageButton` (1-clic, "Aprobar y liberar $X") sobre la etapa entregada.
+  - `CancelEscrowModal`: reembolso del 100% de etapas no aprobadas — **habilitado solo tras pagar la Etapa 1** (regla del Contexto Maestro, forzada server-side con `stage0_locked`).
+  - Depósito del 100% con reserva de saldo del cliente (`updateBalance`), reembolso al cancelar.
+  - Auto-aprobación perezosa por `autoApproveDays` en `/api/agreements/[id]`.
+- [x] **Backend compartido:** `/api/agreements` + `/api/agreements/[id]` sobre KV (`mf:agreements`) — estado consistente cross-device.
 
 ---
 
