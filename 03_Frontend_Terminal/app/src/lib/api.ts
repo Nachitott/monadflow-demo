@@ -1,10 +1,15 @@
 'use client';
 
-import type { MerchantState, SessionState } from '@/lib/server/store';
+import type {
+  AgreementState,
+  MerchantState,
+  SessionState,
+} from '@/lib/server/store';
 import type { Currency } from './useExchangeRate';
 
 export type Merchant = MerchantState;
 export type StreamSession = SessionState;
+export type Agreement = AgreementState;
 
 const json = <T>(r: Response) => r.json() as Promise<T>;
 
@@ -60,3 +65,39 @@ export function accruedAmount(s: StreamSession, now = Date.now()): number {
     s.maxCap,
   );
 }
+
+// ---- Agreements (Modo 2) ----
+
+export const fetchAgreements = (params: Record<string, string> = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return fetch(`/api/agreements${q ? `?${q}` : ''}`).then(json<Agreement[]>);
+};
+
+export const fetchAgreement = (id: string) =>
+  fetch(`/api/agreements/${id}`).then((r) => (r.ok ? json<Agreement>(r) : null));
+
+export const createAgreement = (body: {
+  title: string;
+  totalAmount: number;
+  stageCount: number;
+  autoApproveDays: number;
+  currency: Currency;
+  contractorId: string;
+  contractorName: string;
+}) =>
+  fetch('/api/agreements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(json<Agreement>);
+
+export const agreementAction = (id: string, body: Record<string, unknown>) =>
+  fetch(`/api/agreements/${id}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(json<Agreement>);
+
+export const stageAmountOf = (a: Agreement) => a.totalAmount / a.stageCount;
+export const frozenAmountOf = (a: Agreement) =>
+  a.stages.filter((s) => !s.approved).length * stageAmountOf(a);
