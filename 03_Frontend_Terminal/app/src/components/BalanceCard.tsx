@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { Send } from 'lucide-react';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 interface Props {
@@ -42,6 +44,12 @@ export default function BalanceCard({
       <p className="mt-1 font-mono text-xs text-slate-500">
         ≈ {activeCurrency === 'ARS' ? formatAmount(balanceUSD, 'USD') : formatAmount(balanceARS, 'ARS')}
       </p>
+      <Link
+        href="/enviar"
+        className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500"
+      >
+        <Send className="h-4 w-4" /> Enviar dinero
+      </Link>
     </div>
   );
 }

@@ -28,3 +28,7 @@ Registro de errores y soluciones.
 ## 2026-10-05 — Fase 4 hardening
 9. **Cancelación durante sesión de trabajo dejaba etapa sin pagar** — aprobar etapa N habilitaba de inmediato la entrega N+1 y el cliente podía cancelar con una entrega en revisión. **Solución:** estado `authorizedAt` por etapa; el cliente debe dar luz verde para cada etapa nueva y la cancelación solo es posible entre sesiones (`work_session_active`).
 10. **Cliente sin visibilidad de sus acuerdos** — `/acuerdo` solo listaba los creados por uno mismo. **Solución:** tabs por rol + historial compartido + eliminar en estados cerrados.
+
+## 2026-10-05 — Fase 5
+11. **P2P imposible con balances en localStorage** — la spec exige débito+crédito atómico server-side y los saldos vivían por dispositivo; el server no podía validar ni acreditar al destinatario. **Solución:** `mf:balances` en KV con seed de migración una-sola-vez; `BalanceContext` server-authoritative (localStorage como caché). Detalle: GET `/api/balances` devuelve `null` (no `ZERO`) cuando no hay registro para distinguir "sin registro" de "saldo cero".
+12. **Doble débito potencial tras enviar** — `updateBalance` postea delta al server; llamarlo después de `send()` debitaría dos veces (la API de transfers ya debitó). **Solución:** `refreshBalances()` expuesto en el contexto para releer el saldo autoritativo sin postear.

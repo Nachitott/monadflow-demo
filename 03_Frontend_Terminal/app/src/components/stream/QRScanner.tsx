@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { CameraOff, ScanLine, X } from 'lucide-react';
 
 interface Props {
-  /** Called with the `m` code extracted from a scanned MonadFlow link. */
+  /** Called with the code extracted from a scanned MonadFlow link. */
   onResult: (code: string) => void;
   onCancel: () => void;
+  /** Custom extractor — defaults to the merchant `?m=` link parsing. */
+  parse?: (text: string) => string | null;
 }
 
-const extractCode = (text: string): string | null => {
+const defaultParse = (text: string): string | null => {
   try {
     const url = new URL(text);
     return url.searchParams.get('m');
@@ -19,7 +21,7 @@ const extractCode = (text: string): string | null => {
   }
 };
 
-export default function QRScanner({ onResult, onCancel }: Props) {
+export default function QRScanner({ onResult, onCancel, parse }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const done = useRef(false);
@@ -41,7 +43,7 @@ export default function QRScanner({ onResult, onCancel }: Props) {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 260, height: 260 } },
           (text) => {
-            const code = extractCode(text);
+            const code = (parse ?? defaultParse)(text);
             if (code && !done.current) {
               done.current = true;
               onResult(code);

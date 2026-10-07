@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
-import { ArrowDownLeft, FileSignature, Loader2, QrCode, Store } from 'lucide-react';
+import { ArrowDownLeft, FileSignature, Loader2, QrCode, Send, Store } from 'lucide-react';
 import ActiveSessionBanner from '@/components/stream/ActiveSessionBanner';
 import BalanceCard from '@/components/BalanceCard';
 import FiatRampModal from '@/components/FiatRampModal';
@@ -74,13 +74,22 @@ export default function Home() {
           </Link>
         </div>
 
-        <Link
-          href="/acuerdo"
-          className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:border-sky-500/50"
-        >
-          <FileSignature className="h-5 w-5 text-sky-400" />
-          <span className="text-sm font-medium">Acuerdos por etapas</span>
-        </Link>
+        <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/enviar"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-indigo-500/50"
+          >
+            <Send className="h-7 w-7 text-indigo-400" />
+            <span className="text-sm font-medium">Enviar dinero</span>
+          </Link>
+          <Link
+            href="/acuerdo"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-5 transition hover:border-sky-500/50"
+          >
+            <FileSignature className="h-7 w-7 text-sky-400" />
+            <span className="text-sm font-medium">Acuerdos por etapas</span>
+          </Link>
+        </div>
       </section>
 
       <button

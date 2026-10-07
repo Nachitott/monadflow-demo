@@ -56,15 +56,43 @@ export interface AgreementState {
   cancelledAt?: number;
 }
 
+export interface TransferRecord {
+  id: string; // 'tr-...' in demo; tx hash post-MVP
+  from: string; // sender userId
+  fromName: string;
+  to: string; // recipient alias
+  toUserId: string;
+  amount: number;
+  currency: Currency;
+  note?: string;
+  txRef?: string; // null in demo; on-chain receipt post-MVP
+  status: 'completed' | 'pending' | 'failed';
+  createdAt: number;
+}
+
+export interface AliasRecord {
+  alias: string; // 'nacho.mp' — unique, lowercase
+  userId: string;
+  displayName: string;
+}
+
+export type BalanceMap = Record<string, { ARS: number; USD: number }>;
+
 interface Store {
   merchant: MerchantState;
   sessions: SessionState[];
   agreements: AgreementState[];
+  transfers: TransferRecord[];
+  aliases: AliasRecord[];
+  balances: BalanceMap;
 }
 
 const K_MERCHANT = 'mf:merchant';
 const K_SESSIONS = 'mf:sessions';
 const K_AGREEMENTS = 'mf:agreements';
+const K_TRANSFERS = 'mf:transfers';
+const K_ALIASES = 'mf:aliases';
+const K_BALANCES = 'mf:balances';
 
 const newQrId = () =>
   `qr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -83,8 +111,18 @@ const freshMerchant = (): MerchantState => ({
 const g = globalThis as unknown as { __monadflow?: Store };
 function memStore(): Store {
   if (!g.__monadflow)
-    g.__monadflow = { merchant: freshMerchant(), sessions: [], agreements: [] };
+    g.__monadflow = {
+      merchant: freshMerchant(),
+      sessions: [],
+      agreements: [],
+      transfers: [],
+      aliases: [],
+      balances: {},
+    };
   if (!g.__monadflow.agreements) g.__monadflow.agreements = [];
+  if (!g.__monadflow.transfers) g.__monadflow.transfers = [];
+  if (!g.__monadflow.aliases) g.__monadflow.aliases = [];
+  if (!g.__monadflow.balances) g.__monadflow.balances = {};
   return g.__monadflow;
 }
 
@@ -171,6 +209,96 @@ export async function deleteAgreement(id: string): Promise<boolean> {
   agreements.splice(i, 1);
   if (kvEnabled()) await kvSetJson(K_AGREEMENTS, agreements);
   return true;
+}
+
+// ---- Balances (server-side, per user) ----
+
+export async function getBalances(
+  userId: string,
+): Promise<{ ARS: number; USD: number } | undefined> {
+  const map = kvEnabled()
+    ? ((await kvGetJson<BalanceMap>(K_BALANCES)) ?? {})
+    : memStore().balances;
+  return map[userId];
+}
+
+export async function setBalances(
+  userId: string,
+  balances: { ARS: number; USD: number },
+): Promise<void> {
+  const map = kvEnabled()
+    ? ((await kvGetJson<BalanceMap>(K_BALANCES)) ?? {})
+    : memStore().balances;
+  map[userId] = balances;
+  if (kvEnabled()) await kvSetJson(K_BALANCES, map);
+}
+
+export async function applyBalanceDelta(
+  userId: string,
+  delta: number,
+  currency: Currency,
+): Promise<{ ARS: number; USD: number }> {
+  const current = (await getBalances(userId)) ?? { ARS: 0, USD: 0 };
+  const next = { ...current, [currency]: Math.max(0, current[currency] + delta) };
+  await setBalances(userId, next);
+  return next;
+}
+
+// ---- Aliases (P2P registry) ----
+
+const normalizeAlias = (alias: string) => alias.trim().toLowerCase();
+
+export async function getAlias(alias: string): Promise<AliasRecord | undefined> {
+  const target = normalizeAlias(alias);
+  const aliases = kvEnabled()
+    ? ((await kvGetJson<AliasRecord[]>(K_ALIASES)) ?? [])
+    : memStore().aliases;
+  return aliases.find((a) => a.alias === target);
+}
+
+export async function getAliasByUser(
+  userId: string,
+): Promise<AliasRecord | undefined> {
+  const aliases = kvEnabled()
+    ? ((await kvGetJson<AliasRecord[]>(K_ALIASES)) ?? [])
+    : memStore().aliases;
+  return aliases.find((a) => a.userId === userId);
+}
+
+export async function saveAlias(record: AliasRecord): Promise<void> {
+  const aliases = kvEnabled()
+    ? ((await kvGetJson<AliasRecord[]>(K_ALIASES)) ?? [])
+    : memStore().aliases;
+  const i = aliases.findIndex((a) => a.userId === record.userId);
+  if (i >= 0) aliases[i] = record;
+  else aliases.push(record);
+  if (kvEnabled()) await kvSetJson(K_ALIASES, aliases);
+}
+
+// ---- Transfers (Modo 3) ----
+
+export const makeTransferId = () =>
+  `tr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+export async function listTransfers(): Promise<TransferRecord[]> {
+  if (!kvEnabled()) return memStore().transfers;
+  return (await kvGetJson<TransferRecord[]>(K_TRANSFERS)) ?? [];
+}
+
+export async function getTransfer(
+  id: string,
+): Promise<TransferRecord | undefined> {
+  return (await listTransfers()).find((t) => t.id === id);
+}
+
+export async function saveTransfer(t: TransferRecord): Promise<void> {
+  const transfers = kvEnabled()
+    ? ((await kvGetJson<TransferRecord[]>(K_TRANSFERS)) ?? [])
+    : memStore().transfers;
+  const i = transfers.findIndex((x) => x.id === t.id);
+  if (i >= 0) transfers[i] = t;
+  else transfers.push(t);
+  if (kvEnabled()) await kvSetJson(K_TRANSFERS, transfers);
 }
 
 export { newQrId, makeSessionId };

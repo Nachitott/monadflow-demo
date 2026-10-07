@@ -53,3 +53,12 @@ BitÃ¡cora de trabajo para este perfil.
 - `/acuerdo/[id]`: tarjeta "Dar luz verde" con aviso de pago comprometido; copy de cancelación por estado (pre-etapa-1 / sesión de trabajo / disponible).
 - `MilestoneTracker`: badge "Autorizada" (ámbar, Lock).
 - Verificado end-to-end: 403 sin autorización, 409 con entrega en revisión, cancel entre etapas OK, delete en cerrado OK.
+
+## 2026-10-05 — Agente 03 (Frontend UX) — Fase 5 completada (Modo 3 P2P)
+- Spec `01_Architecture/Transferencias_P2P.md`: envío por alias/QR con comprobante, seam `useTransfers` para migración on-chain sin tocar UI.
+- **Balances server-side:** `mf:balances` en KV + `/api/balances` (GET devuelve `null` sin registro → POST `mode:'seed'` migra una-sola-vez desde localStorage; POST `delta` aplica cambio). `BalanceContext` ahora server-authoritative: localStorage = caché de pintura instantánea, refetch en `window.focus`, `refreshBalances()` expuesto. El saldo sigue al usuario entre dispositivos; carga fiat / reservas / pagos de consumo persisten sin cambios en esos flujos.
+- **Aliases:** `mf:aliases` + `/api/aliases` (GET `?alias=` resolución / `?user=` propio; POST registro único case-insensitive, `alias_taken` 409, regex `^[a-z0-9][a-z0-9._-]{2,24}$`).
+- **Transfers:** `mf:transfers` + `/api/transfers` (GET `?user=` historial enviados+recibidos; POST valida alias existe → `alias_not_found` 404, no self → `self_transfer` 400, monto>0, saldo suficiente → `insufficient_funds` 402; débito+crédito en `mf:balances` + record `status:'completed'`). `/api/transfers/[id]` para comprobante.
+- **UI `/enviar`:** tabs Enviar/Recibir — flujo 3 pasos (alias con resolución en vivo debounce + escaneo QR `?to=<alias>` → monto + cartera ARS/USD + nota → `TransferReceipt` "Comprobante #ID"), `MyReceiveQR` con registro de alias inline, `TransferHistoryList` con dirección ±.
+- `QRScanner`: prop `parse` opcional (default sigue leyendo `?m=`). Accesos: tarjeta home + botón en `BalanceCard`.
+- Verificado: build limpio (ruta `/enviar` + 4 API routes nuevas); flujo API end-to-end (seed → alias → transfer → débito/crédito → historial → 4 errores); rutas 200.

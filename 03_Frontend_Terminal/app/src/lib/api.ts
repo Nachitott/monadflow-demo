@@ -2,14 +2,22 @@
 
 import type {
   AgreementState,
+  AliasRecord,
   MerchantState,
   SessionState,
+  TransferRecord,
 } from '@/lib/server/store';
 import type { Currency } from './useExchangeRate';
 
 export type Merchant = MerchantState;
 export type StreamSession = SessionState;
 export type Agreement = AgreementState;
+export type Transfer = TransferRecord;
+export type UserAlias = AliasRecord;
+export interface BalancesShape {
+  ARS: number;
+  USD: number;
+}
 
 const json = <T>(r: Response) => r.json() as Promise<T>;
 
@@ -101,3 +109,76 @@ export const agreementAction = (id: string, body: Record<string, unknown>) =>
 export const stageAmountOf = (a: Agreement) => a.totalAmount / a.stageCount;
 export const frozenAmountOf = (a: Agreement) =>
   a.stages.filter((s) => !s.approved).length * stageAmountOf(a);
+
+// ---- Balances (server-side per user) ----
+
+export const fetchBalances = (userId: string) =>
+  fetch(`/api/balances?user=${encodeURIComponent(userId)}`).then(
+    json<BalancesShape | null>,
+  );
+
+export const postBalanceDelta = (
+  userId: string,
+  delta: number,
+  currency: Currency,
+) =>
+  fetch('/api/balances', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, delta, currency }),
+  }).then(json<BalancesShape>);
+
+export const seedBalances = (userId: string, balances: BalancesShape) =>
+  fetch('/api/balances', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, balances, mode: 'seed' }),
+  }).then(json<BalancesShape>);
+
+// ---- Aliases + Transfers (Modo 3) ----
+
+export const resolveAlias = (alias: string) =>
+  fetch(`/api/aliases?alias=${encodeURIComponent(alias)}`).then((r) =>
+    r.ok ? json<{ alias: string; displayName: string }>(r) : null,
+  );
+
+export const fetchMyAlias = (userId: string) =>
+  fetch(`/api/aliases?user=${encodeURIComponent(userId)}`).then((r) =>
+    r.ok ? json<UserAlias | null>(r) : null,
+  );
+
+export const registerAlias = async (body: {
+  userId: string;
+  alias: string;
+  displayName: string;
+}): Promise<{ alias?: UserAlias; error?: string }> => {
+  const r = await fetch('/api/aliases', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (!r.ok) return { error: data.error ?? 'alias_error' };
+  return { alias: data as UserAlias };
+};
+
+export const fetchTransfers = (userId: string) =>
+  fetch(`/api/transfers?user=${encodeURIComponent(userId)}`).then(json<Transfer[]>);
+
+export const sendTransfer = async (body: {
+  fromUserId: string;
+  fromName: string;
+  toAlias: string;
+  amount: number;
+  currency: Currency;
+  note?: string;
+}): Promise<{ transfer?: Transfer; error?: string }> => {
+  const r = await fetch('/api/transfers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await r.json();
+  if (!r.ok) return { error: data.error ?? 'transfer_error' };
+  return { transfer: data as Transfer };
+};

@@ -5,7 +5,8 @@
 - [x] Fase 2: Autenticación Invisible y Widget Simulador Fiat (ARS/USD)
 - [x] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
 - [x] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
-- [ ] Fase 5: Conexión con Smart Contracts y Animaciones en Tiempo Real
+- [x] Fase 5: Transferencias P2P (Modo 3 — backend intercambiable)
+- [ ] Fase 6: Conexión con Smart Contracts y Animaciones en Tiempo Real
 
 ---
 
@@ -63,7 +64,29 @@
 
 ---
 
-## 🎨 Fase 5: Componentes de Interfaz & Pulido Visual
+## 📤 Fase 5: Transferencias P2P (Modo 3) ✅
+> Spec completo: `01_Architecture/Transferencias_P2P.md`. Implementado sobre la capa mock existente — la ejecución queda encapsulada detrás de `useTransfers` para migración post-MVP sin tocar UI.
+
+- [x] **Store & API (backend mock):**
+  - `src/lib/server/store.ts`: keys `mf:transfers` + `mf:aliases` (+ `mf:balances` server-side) con helpers completos.
+  - `POST/GET /api/transfers` + `GET /api/transfers/[id]` (débito+crédito, validación de saldo `insufficient_funds`, `alias_not_found`, `self_transfer`, `status: 'completed'` inmediato).
+  - `GET/POST /api/aliases` (resolución `?alias=` → destinatario; registro de alias propio único, `alias_taken` 409).
+  - `GET/POST /api/balances` — balances por usuario en KV (delta + seed de migración una-sola-vez desde localStorage).
+- [x] **Balances server-side:** `BalanceContext` ahora es server-authoritative (KV `mf:balances`) con localStorage como caché de pintura instantánea, refetch en `focus` y `refreshBalances()` expuesto — el saldo sigue al usuario entre dispositivos.
+- [x] **Hook único `useTransfers`:** `send(to, amount, currency, note?)`, `resolveAlias(alias)`, `registerAlias`, `history` — seam para la migración on-chain (Fase 6).
+- [x] **Vista `/enviar` (cliente):** tabs Enviar/Recibir.
+  - Paso 1: input alias con resolución en vivo (debounce) + botón escanear QR (`QRScanner` con prop `parse`; QR personal con `?to=<alias>`).
+  - Paso 2: monto es-AR + selector de cartera `ARS | USD` + nota opcional + validación contra saldo.
+  - Paso 3: confirmar 1-clic → `TransferReceipt` con "Comprobante #ID" (nunca hash).
+  - Componentes nuevos en `components/p2p/`: `SendMoneyForm`, `MyReceiveQR`, `TransferReceipt`, `TransferHistoryList`.
+- [x] **Mi QR de cobro:** QR personal en tab "Recibir" (`qrcode.react`) con link `/enviar?to=<alias>` + registro de alias inline + copiar alias.
+- [x] **Accesos:** tarjeta "Enviar dinero" en home + botón "Enviar dinero" en `BalanceCard`.
+- [x] **Coherencia de reglas:** P2P usa la misma capa mock de balances que los demás modos — sin dinero real mezclado con simulado.
+
+---
+
+## 🎨 Fase 6: Componentes de Interfaz & Pulido Visual
 - [ ] Aplicar diseño Mobile-First enfocado en usabilidad en smartphones.
 - [ ] Sanitización estricta de textos: Garantizar cero uso de términos como "Gas", "Hex", "Hash", "USDC" o "Wallet" en la interfaz.
+- [ ] Migración de la ejecución de `useTransfers` al `transfer` ERC-20 (o `TransferHub.sendTo`) junto con el resto de la integración on-chain.
 - [ ] Pruebas de integración con los ABIs reales generados en `02_SmartContracts_Terminal/ABIs/`.
