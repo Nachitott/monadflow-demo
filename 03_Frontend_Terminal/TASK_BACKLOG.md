@@ -85,7 +85,16 @@
 
 ---
 
-## 🎨 Fase 6: Componentes de Interfaz & Pulido Visual
+## � Fase 5.5: Home según boceto `MonadFlow_Inicio.png` ✅
+- [x] **Recomposición de `/`:** header + card de saldo + historial + bottom nav (elimina grilla de cards y FAB "Cargar saldo").
+- [x] **BalanceCard:** fila `Alias:` (link a `/enviar?tab=receive`) + acciones `Transferir` / `Cargar saldo` (`onTopUp`).
+- [x] **BottomNav:** `Por uso` → `/consumo`, `Etapas` → `/acuerdo`, QR central = **escáner universal** (overlay con `QRScanner`; navega a `/consumo?m=`, `/enviar?to=` o `/acuerdo/[id]` según el QR).
+- [x] **Historial unificado:** `GET /api/activity?user=` agrega transfers ±, sesiones cerradas, depósitos a fondo de garantía, etapas liberadas y reembolsos; depósitos fiat se loggean en `mf:activity` vía `reason:'deposit'` en `/api/balances`. Componente `ActivityList` con "Comprobante #id".
+- [x] **Acceso comercio:** ícono `Store` en `HeaderUserBar` → `/comercio`.
+
+---
+
+## �🎨 Fase 6: Componentes de Interfaz & Pulido Visual
 - [ ] Aplicar diseño Mobile-First enfocado en usabilidad en smartphones.
 - [ ] Sanitización estricta de textos: Garantizar cero uso de términos como "Gas", "Hex", "Hash", "USDC" o "Wallet" en la interfaz.
 - [ ] Migración de la ejecución de `useTransfers` al `transfer` ERC-20 (o `TransferHub.sendTo`) junto con el resto de la integración on-chain.

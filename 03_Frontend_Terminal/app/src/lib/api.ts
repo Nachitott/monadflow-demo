@@ -7,7 +7,10 @@ import type {
   SessionState,
   TransferRecord,
 } from '@/lib/server/store';
+import type { ActivityItem } from '@/app/api/activity/route';
 import type { Currency } from './useExchangeRate';
+
+export type { ActivityItem };
 
 export type Merchant = MerchantState;
 export type StreamSession = SessionState;
@@ -121,11 +124,12 @@ export const postBalanceDelta = (
   userId: string,
   delta: number,
   currency: Currency,
+  reason?: 'deposit',
 ) =>
   fetch('/api/balances', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, delta, currency }),
+    body: JSON.stringify({ userId, delta, currency, reason }),
   }).then(json<BalancesShape>);
 
 export const seedBalances = (userId: string, balances: BalancesShape) =>
@@ -164,6 +168,13 @@ export const registerAlias = async (body: {
 
 export const fetchTransfers = (userId: string) =>
   fetch(`/api/transfers?user=${encodeURIComponent(userId)}`).then(json<Transfer[]>);
+
+// ---- Activity feed (unified history for home) ----
+
+export const fetchActivity = (userId: string) =>
+  fetch(`/api/activity?user=${encodeURIComponent(userId)}`).then(
+    json<ActivityItem[]>,
+  );
 
 export const sendTransfer = async (body: {
   fromUserId: string;

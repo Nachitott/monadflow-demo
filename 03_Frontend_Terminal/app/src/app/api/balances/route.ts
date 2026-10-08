@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   applyBalanceDelta,
   getBalances,
+  makeActivityId,
+  saveActivity,
   setBalances,
 } from '@/lib/server/store';
 import type { Currency } from '@/lib/useExchangeRate';
@@ -43,5 +45,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_delta' }, { status: 400 });
   }
   const balances = await applyBalanceDelta(userId, delta, currency);
+  // Fiat top-ups are the only balance change with no domain event behind
+  // them — log it so the activity feed can show the deposit.
+  if (body.reason === 'deposit' && delta > 0) {
+    await saveActivity({
+      id: makeActivityId(),
+      userId,
+      kind: 'deposit',
+      amount: delta,
+      currency,
+      createdAt: Date.now(),
+    });
+  }
   return NextResponse.json(balances);
 }

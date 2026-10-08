@@ -8,10 +8,12 @@ Este documento describe los flujos de navegación y la distribución de pantalla
 * **Pantalla 1: Landing / Login Social**
   * Botón destacado: "Continuar con Google" / "Passkeys".
   * Sin referencias a wallets, gas o Web3.
-* **Pantalla 2: Dashboard Principal**
-  * Saldo destacado en ARS / USD con botón Ticker para alternar moneda.
-  * Botón flotante: "Cargar Pesos" (Abre modal simulador Mercado Pago / CVU).
-  * Acceso directo a dos pestañas principales: **Modo Consumo (QR)** y **Modo Proyectos (Hitos)**.
+* **Pantalla 2: Dashboard Principal** — ref: `ui_mockups/MonadFlow_Inicio.png` (boceto Excalidraw implementado 2026-10-07)
+  * Header fijo: marca izquierda, usuario + "Sesión activa" derecha, ícono `Store` → `/comercio` y logout.
+  * **Card de saldo:** monto destacado en ARS / USD con toggle pill, conversión secundaria, fila `Alias:` (link a QR personal `/enviar?tab=receive`) y acciones `Transferir` → `/enviar` + `Cargar saldo` (modal simulador Mercado Pago / CVU).
+  * Ticker de cotización bajo la card; `ActiveSessionBanner` condicional si hay consumo en curso.
+  * **Historial de transacciones:** feed unificado (`GET /api/activity`) — cargas de saldo, transferencias P2P, pagos por tiempo cerrados, depósitos a fondo de garantía, etapas liberadas y reembolsos. Ícono por tipo, monto firmado `font-mono`, "Comprobante #id".
+  * **Bottom nav fijo:** `Por uso` → `/consumo` | botón central QR = **escáner universal** (detecta links `/consumo?m=`, `/enviar?to=`, `/acuerdo/[id]` y navega) | `Etapas` → `/acuerdo`.
 
 ---
 
