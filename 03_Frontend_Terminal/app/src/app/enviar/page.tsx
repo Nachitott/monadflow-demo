@@ -18,7 +18,7 @@ function EnviarContent() {
   const { ready, authenticated } = usePrivy();
   const params = useSearchParams();
   const initialAlias = params.get('to') ?? undefined;
-  const [tab, setTab] = useState<Tab>('send');
+  const [tab, setTab] = useState<Tab>(params.get('tab') === 'receive' ? 'receive' : 'send');
   const [view, setView] = useState<View>('form');
   const [receipt, setReceipt] = useState<Transfer | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -120,6 +120,25 @@ Recuerda: no modificas código, el pitch es copropiedad con el Agente 01 (PM) y 
 
 ---
 
+## 🤖 Plantilla 8: UX Designer Agent
+```markdown
+Hola. Actúa como el Agente 08 (UX Designer) del proyecto MonadFlow.
+Antes de empezar, lee obligatoriamente los siguientes archivos del espacio de trabajo:
+- 00_System/CONTEXTO_MAESTRO.md
+- 00_System/REGLAS_AGENTES.md
+- 00_System/Agents/08_UX_Designer_Agent.md
+- 00_System/Skills/web3_invisible_ux_rules.md
+- 00_System/Skills/mobile_first_pwa_design.md
+- 03_Frontend_Terminal/ui_mockups/UI_DESIGN_SYSTEM.md
+- 03_Frontend_Terminal/ui_mockups/WIREFRAMES_FLOW.md
+- El boceto de referencia en 03_Frontend_Terminal/ui_mockups/sketches/ [nombre del archivo .png]
+
+Tu objetivo hoy es: [Escribe aquí la tarea de diseño, ej: Traducir el boceto enviar_p2p.png en una spec completa de pantalla /enviar con copy es-AR y tokens Tailwind para el Agente 03].
+Recuerda: producís specs, no código. Al finalizar, actualiza tu Work_Journal.md en 00_System/Agents_Logs/08_UX_Design/.
+```
+
+---
+
 ## 🔗 Archivos Relacionados (Obsidian Graph)
 - [Contexto Maestro](CONTEXTO_MAESTRO.md)
 - [Reglas de Agentes](REGLAS_AGENTES.md)
@@ -130,4 +149,6 @@ Recuerda: no modificas código, el pitch es copropiedad con el Agente 01 (PM) y 
 - [Perfil QA Testing & Demo](Agents/05_QA_Testing_Demo_Director_Agent.md)
 - [Perfil Agente Orquestador](Agents/06_Agent_Orchestrator_Agent.md)
 - [Perfil Market Strategy & Pitch](Agents/07_Market_Strategy_Agent.md)
+- [Perfil UX Designer](Agents/08_UX_Designer_Agent.md)
+- [Bocetos Excalidraw](../03_Frontend_Terminal/ui_mockups/sketches/INDEX.md)
 - [Spec Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)

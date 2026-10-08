@@ -43,6 +43,15 @@
 
 ---
 
+## 🟣 3.5 MODO 3: Transferencias P2P (Envío Directo entre Personas)
+* **Destinado a:** Envíos de dinero cotidianos entre usuarios — "de toda la vida".
+* **Alias / CVU / QR Personal:** El destinatario se identifica por alias (`nacho.mp`) o QR personal — nunca una dirección técnica.
+* **Cartera elegible:** El usuario elige desde cuál cartera sale el dinero (ARS o USD).
+* **Comprobante inmediato:** Transferencia instantánea con "Comprobante #ID", sin etapas ni revisión — el modo más simple de los tres.
+* **Backend intercambiable:** En la demo corre sobre la capa mock; post-MVP la ejecución migra a `transfer` ERC-20 (o `TransferHub.sol`) sin tocar la UI. Spec completo: [Transferencias P2P](../01_Architecture/Transferencias_P2P.md).
+
+---
+
 ## ⚡ 4. Arquitectura Técnica y Justificación de Monad
 * **Por qué Monad es indispensable:**
   * **10,000 TPS y 1s Block Finality:** Permite streaming de micropagos segundo a segundo sin saturación ni latencia.
@@ -65,6 +74,8 @@
   - [Fiat Integrations (OpenCode)](Agents/04_Fiat_Integrations_Agent.md)
   - [QA Testing & Demo (OpenCode)](Agents/05_QA_Testing_Demo_Director_Agent.md)
   - [Agente Orquestador (reserva futura)](Agents/06_Agent_Orchestrator_Agent.md)
+  - [Market Strategy](Agents/07_Market_Strategy_Agent.md)
+  - [UX Designer (bocetos Excalidraw → specs)](Agents/08_UX_Designer_Agent.md)
 - **Skills:**
   - [Monad Parallel EVM Guide](Skills/monad_parallel_evm_guide.md)
   - [Web3 Invisible UX Rules](Skills/web3_invisible_ux_rules.md)

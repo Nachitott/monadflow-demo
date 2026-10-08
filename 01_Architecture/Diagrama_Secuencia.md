@@ -182,6 +182,7 @@ sequenceDiagram
 - [Contexto Maestro](../00_System/CONTEXTO_MAESTRO.md)
 - [Reglas de Agentes](../00_System/REGLAS_AGENTES.md)
 - [Modelado de Smart Contracts](Modelado_SmartContracts.md)
+- [Transferencias P2P (Modo 3)](Transferencias_P2P.md)
 - [Integración Frontend](Integracion_Frontend.md)
 - [Spec Agente Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)
 - [Backlog Smart Contracts](../02_SmartContracts_Terminal/TASK_BACKLOG.md)

@@ -13,8 +13,9 @@ const storageKey = (userId: string) => `monadflow:balance:${userId}`;
 
 interface BalanceContextValue {
   balances: Balances;
-  /** Positive delta adds funds, negative deducts (clamped at 0). */
-  updateBalance: (delta: number, currency: Currency) => void;
+  /** Positive delta adds funds, negative deducts (clamped at 0).
+   *  Pass reason 'deposit' for fiat top-ups so they land in the activity feed. */
+  updateBalance: (delta: number, currency: Currency, reason?: 'deposit') => void;
   /** Pull the authoritative balance from the server (e.g. after a transfer). */
   refreshBalances: () => void;
 }
@@ -100,9 +101,9 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
   }, [balances, userId]);
 
   const updateBalance = useCallback(
-    (delta: number, currency: Currency) => {
+    (delta: number, currency: Currency, reason?: 'deposit') => {
       setBalances((b) => ({ ...b, [currency]: Math.max(0, b[currency] + delta) }));
-      if (userId) postBalanceDelta(userId, delta, currency).catch(() => {});
+      if (userId) postBalanceDelta(userId, delta, currency, reason).catch(() => {});
     },
     [userId],
   );

@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { usePrivy, useLogout } from '@privy-io/react-auth';
-import { CheckCircle2, LogOut, Waves } from 'lucide-react';
+import { CheckCircle2, LogOut, Store, Waves } from 'lucide-react';
 
 export default function HeaderUserBar() {
   const { user } = usePrivy();
@@ -24,6 +25,13 @@ export default function HeaderUserBar() {
             Sesión activa
           </span>
         </div>
+        <Link
+          href="/comercio"
+          aria-label="Panel de comercio"
+          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+        >
+          <Store className="h-5 w-5" />
+        </Link>
         <button
           onClick={logout}
           aria-label="Cerrar sesión"

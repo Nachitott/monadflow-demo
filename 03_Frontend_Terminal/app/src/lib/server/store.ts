@@ -76,6 +76,22 @@ export interface AliasRecord {
   displayName: string;
 }
 
+/**
+ * Append-only log for money events that can't be derived from the
+ * domain stores (sessions/agreements/transfers already carry their own
+ * timestamps). Today the only such event is a fiat top-up: the balance
+ * delta alone leaves no trace, so the deposit writes a record here and
+ * GET /api/activity merges it with the derived entries.
+ */
+export interface ActivityRecord {
+  id: string; // 'ac-...'
+  userId: string;
+  kind: 'deposit';
+  amount: number;
+  currency: Currency;
+  createdAt: number;
+}
+
 export type BalanceMap = Record<string, { ARS: number; USD: number }>;
 
 interface Store {
@@ -85,6 +101,7 @@ interface Store {
   transfers: TransferRecord[];
   aliases: AliasRecord[];
   balances: BalanceMap;
+  activity: ActivityRecord[];
 }
 
 const K_MERCHANT = 'mf:merchant';
@@ -93,6 +110,7 @@ const K_AGREEMENTS = 'mf:agreements';
 const K_TRANSFERS = 'mf:transfers';
 const K_ALIASES = 'mf:aliases';
 const K_BALANCES = 'mf:balances';
+const K_ACTIVITY = 'mf:activity';
 
 const newQrId = () =>
   `qr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -118,11 +136,13 @@ function memStore(): Store {
       transfers: [],
       aliases: [],
       balances: {},
+      activity: [],
     };
   if (!g.__monadflow.agreements) g.__monadflow.agreements = [];
   if (!g.__monadflow.transfers) g.__monadflow.transfers = [];
   if (!g.__monadflow.aliases) g.__monadflow.aliases = [];
   if (!g.__monadflow.balances) g.__monadflow.balances = {};
+  if (!g.__monadflow.activity) g.__monadflow.activity = [];
   return g.__monadflow;
 }
 
@@ -299,6 +319,24 @@ export async function saveTransfer(t: TransferRecord): Promise<void> {
   if (i >= 0) transfers[i] = t;
   else transfers.push(t);
   if (kvEnabled()) await kvSetJson(K_TRANSFERS, transfers);
+}
+
+// ---- Activity log (non-derivable money events) ----
+
+export const makeActivityId = () =>
+  `ac-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+export async function listActivity(): Promise<ActivityRecord[]> {
+  if (!kvEnabled()) return memStore().activity;
+  return (await kvGetJson<ActivityRecord[]>(K_ACTIVITY)) ?? [];
+}
+
+export async function saveActivity(a: ActivityRecord): Promise<void> {
+  const activity = kvEnabled()
+    ? ((await kvGetJson<ActivityRecord[]>(K_ACTIVITY)) ?? [])
+    : memStore().activity;
+  activity.push(a);
+  if (kvEnabled()) await kvSetJson(K_ACTIVITY, activity);
 }
 
 export { newQrId, makeSessionId };
