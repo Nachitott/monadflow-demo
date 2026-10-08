@@ -334,6 +334,7 @@ Estos puntos quedan abiertos deliberadamente para que el agente intermediario se
 - [Contexto Maestro](../00_System/CONTEXTO_MAESTRO.md)
 - [Reglas de Agentes](../00_System/REGLAS_AGENTES.md)
 - [Diagrama de Secuencia](Diagrama_Secuencia.md)
+- [Transferencias P2P (Modo 3)](Transferencias_P2P.md)
 - [Integración Frontend](Integracion_Frontend.md)
 - [Spec Agente Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)
 - [Perfil Smart Contracts Engineer](../00_System/Agents/02_Smart_Contracts_Engineer_Agent.md)

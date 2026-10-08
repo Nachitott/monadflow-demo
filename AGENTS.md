@@ -25,7 +25,7 @@ Repo **doc-first**. Los directorios numerados son notas de un vault Obsidian, en
 
 No hay `package.json` raíz, ni workspaces, ni turbo, ni monorepo tooling. **Todo comando corre dentro del proyecto que corresponda.**
 
-Los perfiles de agente viven en `00_System/Agents/` (01–07). El **07_Market_Strategy** es de solo documentación (mercado, copy y pitch): no toca código y co-redacta el pitch junto al PM (Agente 01).
+Los perfiles de agente viven en `00_System/Agents/` (01–08). El **07_Market_Strategy** es de solo documentación (mercado, copy y pitch): no toca código y co-redacta el pitch junto al PM (Agente 01). El **08_UX_Designer** produce specs de diseño (componentes, pantallas, copy es-AR) a partir de bocetos Excalidraw depositados en `03_Frontend_Terminal/ui_mockups/sketches/` — tampoco toca `src/`; sus specs las implementa el Agente 03.
 
 ## 2. Los dos proyectos de código
 

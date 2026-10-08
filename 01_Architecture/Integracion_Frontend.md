@@ -127,6 +127,7 @@ Para cumplir con la norma de **Cadena de Bloques Invisible** exigida por Metropo
 - [Reglas de Agentes](../00_System/REGLAS_AGENTES.md)
 - [Diagrama de Secuencia](Diagrama_Secuencia.md)
 - [Modelado de Smart Contracts](Modelado_SmartContracts.md)
+- [Transferencias P2P (Modo 3)](Transferencias_P2P.md)
 - [Spec Agente Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)
 - [Perfil Frontend UX Engineer](../00_System/Agents/03_Frontend_UX_Engineer_Agent.md)
 - [Perfil Fiat Integrations](../00_System/Agents/04_Fiat_Integrations_Agent.md)
