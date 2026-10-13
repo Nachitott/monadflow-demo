@@ -1,0 +1,19 @@
+No files changed, compilation skipped
+
+Ran 13 tests for test/MockExchange.t.sol:MockExchangeTest
+[PASS] test_MintIsPublicFaucet() (gas: 137370)
+[PASS] test_RevertConstructorZeroAddress() (gas: 6828)
+[PASS] test_RevertConstructorZeroRate() (gas: 9080)
+[PASS] test_RevertSetRateZero() (gas: 35046)
+[PASS] test_RevertSwapDustOutput() (gas: 40885)
+[PASS] test_RevertSwapWithoutApproval() (gas: 107842)
+[PASS] test_RevertSwapZeroAmount() (gas: 73322)
+[PASS] test_SetRateEmitsEvent() (gas: 49833)
+[PASS] test_SetRateOnlyOwner() (gas: 36069)
+[PASS] test_SwapARSforUSDC() (gas: 134711)
+[PASS] test_SwapUSDCforARS() (gas: 134558)
+[PASS] test_SwapUsesUpdatedRate() (gas: 128245)
+[PASS] test_TokenDecimals() (gas: 17656)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 4.20ms (13.08ms CPU time)
+
+Ran 1 test suite in 12.46ms (4.20ms CPU time): 13 tests passed, 0 failed, 0 skipped (13 total tests)
