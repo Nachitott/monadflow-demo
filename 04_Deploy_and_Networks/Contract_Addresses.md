@@ -8,25 +8,26 @@ Este documento registra las direcciones de los contratos inteligentes desplegado
 
 | Contrato | Dirección en Monad Testnet | Estado | Verificado |
 | :--- | :--- | :---: | :---: |
-| `TimeStream.sol` | *Pendiente de despliegue* | ⏳ En desarrollo | ❌ No |
-| `MilestoneEscrow.sol` | *Pendiente de despliegue* | ⏳ En desarrollo | ❌ No |
-| `MockUSDC.sol` (Op-test) | *Pendiente de despliegue* | ⏳ En desarrollo | ❌ No |
-| `MockARS.sol` (Op-test) | *Pendiente de despliegue* | ⏳ En desarrollo | ❌ No |
-| `MockExchange.sol` (ARS↔USD) | *Pendiente de despliegue* | ⏳ En desarrollo | ❌ No |
+| `MockUSDC.sol` (Op-test) | [`0x27BE5512a477045EF270EE16c804776D6269663C`](https://testnet.monadexplorer.com/address/0x27BE5512a477045EF270EE16c804776D6269663C) | ✅ Deployed | ❌ No |
+| `MockARS.sol` (Op-test) | [`0x1569b7c9115DF4AFeE1C71689D8E390bceea4958`](https://testnet.monadexplorer.com/address/0x1569b7c9115DF4AFeE1C71689D8E390bceea4958) | ✅ Deployed | ❌ No |
+| `MockExchange.sol` (ARS↔USD) | [`0x1C87797a412519BbB4AB62e29E24D2530E200026`](https://testnet.monadexplorer.com/address/0x1C87797a412519BbB4AB62e29E24D2530E200026) | ✅ Deployed | ❌ No |
+| `TimeStream.sol` | [`0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8`](https://testnet.monadexplorer.com/address/0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8) | ✅ Deployed | ❌ No |
+| `MilestoneEscrow.sol` | [`0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817`](https://testnet.monadexplorer.com/address/0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817) | ✅ Deployed | ❌ No |
 
 ---
 
 ## 📝 Historial de Deployments
-* **Fecha:** *Por registrar*
-* **Deployer Wallet:** `0x...`
+* **Fecha:** 2026-10-13
+* **Deployer Wallet:** `0x36b85Da9DdF1f9D67b02830D13506317abe740d1` (owner de `MockExchange`)
 * **RPC Used:** `https://testnet-rpc.monad.xyz`
-* **Script:** `script/Deploy.s.sol`
+* **Script:** `script/Deploy.s.sol` — artifacts en `broadcast/Deploy.s.sol/10143/run-latest.json`
+* **Params:** `arsPerUsd = 1200e18` (1 USD ↔ 1.200 ARS)
 
-> **Estado del frontend:** la app ya está *chain-ready* (fases F0–F5 de
-> `03_Frontend_Terminal/TASK_BACKLOG2.md` completas — hooks, ABIs y consumo
-> dual mock/on-chain implementados). Falta únicamente ejecutar `Deploy.s.sol`
-> y cargar las addresses en `NEXT_PUBLIC_*` + `NEXT_PUBLIC_CHAIN_MODE=1` para
-> activar el modo on-chain.
+> **Estado del frontend:** la app corre en **modo on-chain activo**
+> (`NEXT_PUBLIC_CHAIN_MODE=1` + las 5 addresses en `.env.local`).
+> Fases F0–F5 + Final de `03_Frontend_Terminal/TASK_BACKLOG2.md` completas —
+> smoke on-chain verificado con `cast` (exchange, stream start/stop,
+> escrow deliver/approve/cancel, faucet de gas).
 
 ---
 

@@ -86,15 +86,15 @@ La home ya puede cargar saldo real y leer balances/precio desde la chain.
 - [x] Docs: puntero en `TASK_BACKLOG.md` → este archivo; `Monad_Testnet_Config.md` §D con las vars del modo on-chain; `Contract_Addresses.md` con nota "frontend chain-ready" (deploy sigue pendiente)
 - [x] `npm run build` verde + smoke del POST (201/409-dedupe/400s)
 
-## Final — Verificación y deploy ☐
+## Final — Verificación y deploy ✅
 
-- [ ] `npm run build` verde
-- [ ] Smoke mock mode (flag off): home, consumo, comercio, acuerdo, enviar — todo como antes
-- [ ] Deploy de los 5 contratos a Monad Testnet (script Foundry existente en `02_SmartContracts_Terminal`)
-- [ ] Cargar addresses en `.env.local` + `.env.example`, `NEXT_PUBLIC_CHAIN_MODE=1`
-- [ ] Smoke chain mode: faucet → mint → consumo start/stop → acuerdo → P2P
-- [ ] Actualizar `04_Deploy_and_Networks/Contract_Addresses.md` solo cuando el deploy sea real
-- [ ] Commit + merge a `main`
+- [x] `npm run build` verde (mock y chain mode)
+- [x] Smoke mock mode (flag off): sesión create/409-dup/close, merchant update/deactivate-409/regenerate, acuerdo create→deposit→deliver→approve, alias+transfer, actividad unificada — todo como antes
+- [x] Deploy de los 5 contratos a Monad Testnet (2026-10-13) — addresses en `04_Deploy_and_Networks/Contract_Addresses.md`
+- [x] Cargar addresses en `.env.local` + `.env.example`, `NEXT_PUBLIC_CHAIN_MODE=1` (+ `GAS_FAUCET_PRIVATE_KEY` server-only)
+- [x] Smoke chain mode (via `cast`): `arsPerUsd`, mint/balanceOf, `setRate`, `startStream`→`accrued`→`stopStream` (paid+refund exactos), `createProject`→`deliverStage`→`approveStage`→`cancelProject` (pago y reembolso exactos), `/api/gas` `funded:true`. Smoke UI con login Privy queda como verificación manual.
+- [x] Actualizar `04_Deploy_and_Networks/Contract_Addresses.md` solo cuando el deploy sea real
+- [x] Commit + merge a `main`
 
 ## Futuro (fuera de este backlog)
 

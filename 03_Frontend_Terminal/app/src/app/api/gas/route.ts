@@ -17,7 +17,7 @@ const TOP_UP = parseEther('0.05');
 /**
  * Silent gas faucet: tops up a user's embedded wallet so every action
  * "just works" — the user never learns that network fees exist.
- * Server-side only; GAS_FUNDER_PRIVATE_KEY never reaches the client.
+ * Server-side only; GAS_FAUCET_PRIVATE_KEY never reaches the client.
  * No-ops cleanly when the key isn't configured (local dev).
  */
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!isAddress(address))
     return NextResponse.json({ error: 'invalid_address' }, { status: 400 });
 
-  const pk = process.env.GAS_FUNDER_PRIVATE_KEY;
+  const pk = process.env.GAS_FAUCET_PRIVATE_KEY;
   if (!pk) return NextResponse.json({ funded: false, reason: 'no_funder' });
 
   const account = privateKeyToAccount(

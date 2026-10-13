@@ -91,3 +91,12 @@ BitÃ¡cora de trabajo para este perfil.
 - Integraciones: `/consumo` postea `consumo` al cerrar stream on-chain (dedupe `stream:{id}`); `/acuerdo` mergeChain y `/acuerdo/[id]` reload reportan etapas pagas; `escrow_refund` explícito al cancelar; transfers chain ya derivan vía `chain:true`; mint ya loguea `deposit` vía balances reason.
 - Docs: puntero TASK_BACKLOG→TASK_BACKLOG2; Monad_Testnet_Config §D vars chain-mode; Contract_Addresses nota "chain-ready" (deploy pendiente); .env.example ya completo desde F0.
 - Verificado: tsc + build verdes; smoke POST 201/dedupe/400s; feed mezcla mock+chain sin duplicados.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — FINAL: deploy + cierre de TASK_BACKLOG2
+- **Bug fix previo:** `/api/gas` leía `GAS_FUNDER_PRIVATE_KEY` pero toda la doc define `GAS_FAUCET_PRIVATE_KEY` → el faucet no-opeaba silencioso. Unificado al nombre documentado.
+- **Verificación mock (flag off):** `npm run build` verde; smoke API end-to-end — sesión create/409-dup/end, merchant update/deactivate-409/regenerate, acuerdo create→deposit→deliver→approve, alias+transfer P2P, feed de actividad unificado, `/api/gas` no-op `no_funder` sin key.
+- **Deploy real a Monad Testnet (10143):** `forge script Deploy.s.sol:Deploy --rpc-url monad_testnet --broadcast` con la key de `02_SmartContracts_Terminal/.env` (deployer `0x36b85…e740d1`, 5 MON). Addresses: MockUSDC `0x27BE…663C`, MockARS `0x1569…4958`, MockExchange `0x1C87…0026` (arsPerUsd 1200e18), TimeStream `0xE320…18C8`, MilestoneEscrow `0xA8f6…d817`. Registradas en `Contract_Addresses.md` + `.env.local` + `.env.example`.
+- **Smoke on-chain (cast):** `arsPerUsd` 1200e18; mint 10.000 mARS; `setRate` 0.001 ARS/s; `approve`+`startStream`→`accrued`→`stopStream` con paid/refund exactos (24s × 1e15 = 2.4e16); escrow con key efímera de contratista: `createProject`→`deliverStage`→`approveStage` (pago exacto 1000 ARS)→`cancelProject` (reembolso 1000 ARS); `/api/gas` `funded:true` (0.05 MON a address nueva) — fix del env var verificado en vivo.
+- **Auditoría Web3-invisible:** grep de `gas|wallet|billetera|hash|0x|USDC|token|smart contract|escrow|blockchain|metamask|wei` en `src/` → cero términos en copy visible (solo identificadores internos/ABIs).
+- **Docs:** `Contract_Addresses.md` con tabla real + links al explorer; `TASK_BACKLOG2.md` sección Final ✅; `TASK_BACKLOG.md` Fase 6 ✅; archivo `nul` de la raíz eliminado.
+- **Pendiente (manual):** smoke UI con login Privy en chain mode (no automatizable sin Google/email); verificación de contratos en explorer (no hay verifier configurado).
