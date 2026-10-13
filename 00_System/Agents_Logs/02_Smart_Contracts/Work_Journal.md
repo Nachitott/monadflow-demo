@@ -59,3 +59,33 @@ Módulo 0 (capa de moneda): `MockUSDC.sol`, `MockARS.sol`, `MockExchange.sol` + 
 
 ### Próximo paso sugerido
 Módulo 1: `TimeStream.sol` (registry de tarifas, voucher EIP-712, escrow de maxCap, killswitch) + `TimeStream.t.sol`.
+
+---
+
+## 2026-10-13 (continuación) — Módulo 1: TimeStream.sol ✅
+
+### Contexto
+- Trabajo committeado previamente en rama `feat/02-smart-contracts` (`b5c81c6`): setup + Módulo 0. Se detectó que el workspace ES repo git (`Nachitott/monadflow-demo`).
+
+### Trabajo ejecutado
+- `src/TimeStream.sol` — Modo 1 completo según spec v2.0:
+  - `MerchantProfile`/`StreamSession`, mappings `sessions`/`merchants`/`merchantSessions`/`userSessions` (aislados por bytes32/address — Parallel EVM).
+  - `setRate` self-registration; `startStream` con escrow de `maxCap` + resolución de rate por registry (revert `CurrencyMismatch` — decisión documentada) o voucher EIP-712 `RateVoucher` (EIP712 OZ + ECDSA.recover; stateless por decisión v2.1).
+  - `stopStream` nonReentrant: user/merchant/cualquiera-si-cap-agotado (hook keeper del orquestador); CEI + `StreamSettled`.
+  - Killswitch `deactivateQR`/`reactivateQR` por address; no afecta sesiones activas.
+  - Views: `getSession`, `accruedAmount`, `getUserSessions`, `getMerchantSessions`.
+- `test/TimeStream.t.sol` — **25 tests, 100% pass** (38 totales del repo). Voucher firmado on-chain con `vm.sign` + digest EIP-712 replicado en test.
+- Errores resueltos: stack-too-deep en destructure de struct público → agregada view `getSession`; `expectEmit` con topic1 desconocido → check parcial (ver Error_Index E5/E6).
+- `TASK_BACKLOG.md`: Módulo 1 + Fase 2 marcados completos. Log: `test_logs/2026-10-13_modulo1_forge_test.log`.
+
+### Estado DoD
+| Punto | Estado |
+|---|---|
+| Build limpio | ✅ sin warnings |
+| Tests 100% | ✅ 38/38 (25 nuevos) — account-agnostic: solo voucher del comercio valida firma |
+| Confirmación <1s en Monad | ⏸️ pendiente deploy |
+| Gasless/paymaster | ⏸️ por diseño (capa ERC-4337) |
+| Logs | ✅ |
+
+### Próximo paso sugerido
+Módulo 2: `MilestoneEscrow.sol` (depósito 100%, etapa 0 intocable, deliver/approve/auto-release, disputa con agent) + `MilestoneEscrow.t.sol`.

@@ -30,3 +30,13 @@ Registro de errores y soluciones.
 - **Mensaje:** `missing-events-arithmetic` en `arsPerUsd = newArsPerUsd` y `reentrancy-events` ×2 (`emit Converted` después de llamadas externas).
 - **Causa raíz:** forge 1.8 incluye linter estático que exige eventos asociados a cambios de estado usados en aritmética, y desaconseja emitir eventos tras external calls.
 - **Solución:** `setRate` → write primero, `RateUpdated` después (capturando `previousRate`); swaps → `emit Converted` movido antes de `transferFrom`/`mint` (seguro: los logs solo persisten si la tx no revierte). Build final sin warnings.
+
+### E5 — "Stack too deep" al destructurar struct público de 11 campos en test
+- **Mensaje:** `Compiler error: Stack too deep ... test/TimeStream.t.sol:392` en helper que destructuraba el tuple del getter `sessions(id)`.
+- **Causa raíz:** el getter autogenerado de un struct público devuelve un tuple de N campos; destructurar 11 campos + variables locales supera el límite de stack del codegen legacy (sin via-IR).
+- **Solución:** agregada view `getSession(bytes32) returns (StreamSession memory)` al contrato (devuelve struct, no tuple) — evita destructure y además sirve al frontend. Alternativa descartada: `via_ir` global (innecesario y más lento).
+
+### E6 — `vm.expectEmit` falla con topic indexed desconocido (`sessionId`)
+- **Mensaje:** `[FAIL: Transfer != expected StreamStarted]` en `test_StartStreamRegistry`.
+- **Causa raíz:** `expectEmit(true, true, true, true)` compara topic1 (`sessionId`) contra `bytes32(0)` placeholder — el id real se deriva dentro de la llamada (`keccak256(user, merchant, nonce, timestamp)`) y no se conoce antes.
+- **Solución:** `expectEmit(false, true, true, true)` — se verifican actor (`user`, `merchant`) y data; topic1 se omite cuando el valor no es predecible. Patrón aplicable a todos los eventos con id generado on-chain.

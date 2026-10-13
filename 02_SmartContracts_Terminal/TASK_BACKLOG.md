@@ -6,7 +6,7 @@
 ## 🎯 Prioridad y Estado General
 - [x] Fase 0: Capa de Moneda (MockUSDC / MockARS / MockExchange)
 - [x] Fase 1: Entorno de Desarrollo y Estructuras Core
-- [ ] Fase 2: Implementación de TimeStream.sol (Modo 1)
+- [x] Fase 2: Implementación de TimeStream.sol (Modo 1)
 - [ ] Fase 3: Implementación de MilestoneEscrow.sol (Modo 2)
 - [ ] Fase 4: Killswitch, Account Abstraction y hooks del Agente Orquestador
 - [ ] Fase 5: Pruebas de Carga en Foundry y Exportación de ABIs
@@ -48,24 +48,27 @@
 
 ---
 
-## 📌 Módulo 1: TimeStream.sol (Cobro por Uso / Tiempo)
-- [ ] **Estructuras:**
+## 📌 Módulo 1: TimeStream.sol (Cobro por Uso / Tiempo) — ✅ Completado 2026-10-13
+- [x] **Estructuras:**
   - `MerchantProfile { ratePerSecond, rateCurrency, disabled }`.
   - `StreamSession { id, user, merchant, ratePerSecond, maxCap, balanceDeposited, startTime, stopTime, totalPaid, currency, active }`.
-- [ ] **Registry de tarifas `setRate(ratePerSecond, currency)`:**
-  - `msg.sender` = comercio (self-registration). Emite `RateSet`.
-- [ ] **Función `startStream(merchant, maxCap, currency, voucher)`:**
-  - Requiere `!merchants[merchant].disabled`.
-  - Resuelve rate: voucher EIP-712 `RateVoucher` firmado por el merchant (con `expiresAt` + `qrNonce`) **o** `merchants[merchant].ratePerSecond` del registry.
+- [x] **Registry de tarifas `setRate(ratePerSecond, currency)`:**
+  - `msg.sender` = comercio (self-registration). Revert `InvalidRate` si rate == 0. Emite `RateSet`.
+- [x] **Función `startStream(merchant, maxCap, currency, voucher)`:**
+  - Requiere `!merchants[merchant].disabled` y `maxCap > 0`.
+  - Resuelve rate: voucher EIP-712 `RateVoucher` firmado por el merchant (con `expiresAt` + `qrNonce`) **o** `merchants[merchant].ratePerSecond` del registry (revert `RateNotSet` / `CurrencyMismatch`).
+  - Voucher funciona aunque el merchant no tenga perfil en registry (promo firmada off-chain).
   - **Escrow por sesión:** `safeTransferFrom(currencyToken, user, this, maxCap)` → `balanceDeposited = maxCap`.
   - Emitir `StreamStarted(sessionId, user, merchant, ratePerSecond, maxCap, currency)`.
-- [ ] **Función `stopStream(sessionId)`:**
-  - Callable por `session.user`, `session.merchant`, o **cualquiera** si `elapsed * rate >= maxCap`.
+- [x] **Función `stopStream(sessionId)`:**
+  - Callable por `session.user`, `session.merchant`, o **cualquiera** si `elapsed * rate >= maxCap` (keeper-friendly para el orquestador).
   - CEI: `totalPaid = min(duration * rate, maxCap)` → estado → `safeTransfer(merchant, totalPaid)` + `safeTransfer(user, maxCap - totalPaid)`.
   - `ReentrancyGuard`. Emitir `StreamSettled`.
-- [ ] **Killswitch por comercio:**
-  - `deactivateQR()` / `reactivateQR()` — solo el merchant (`msg.sender`), key = `address`. Bloquea nuevos `startStream`, no las sesiones activas.
-- [ ] **Optimización Monad Parallel EVM:** mapeos aislados por `bytes32`, sin acumuladores globales.
+- [x] **Killswitch por comercio:**
+  - `deactivateQR()` / `reactivateQR()` — solo el merchant (`msg.sender`), key = `address`. Revert `NoMerchantProfile` sin `setRate` previo. Bloquea nuevos `startStream`, no las sesiones activas.
+- [x] **Optimización Monad Parallel EVM:** mapeos aislados por `bytes32`, sin acumuladores globales.
+- [x] **Views extra (soporte dashboard/frontend):** `getSession(id)` (struct completo), `accruedAmount(id)` (min(elapsed·rate, cap) en vivo), `getUserSessions(addr)`, `getMerchantSessions(addr)`.
+- [x] **`test/TimeStream.t.sol`: 25 tests, 100% pass** — escrow/refund exacto, stop por user/merchant/tercero-con-cap-agotado, killswitch (bloquea nuevos, no activos), voucher válido/expirado/firmante-inválido/currency-mismatch/sin-perfil, flujo ARS end-to-end, views. Log: `test_logs/2026-10-13_modulo1_forge_test.log`.
 
 ---
 
