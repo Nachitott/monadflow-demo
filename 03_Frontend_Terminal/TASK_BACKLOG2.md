@@ -62,12 +62,16 @@ La home ya puede cargar saldo real y leer balances/precio desde la chain.
 - `cancelProject` on-chain: habilitado tras liberar etapa 0, y reembolsa al cliente también etapas entregadas-no-aprobadas (el mock bloqueaba la cancelación con sesión de trabajo activa).
 - Disputas: `agent = address(0)` en `createProject` → `disputeStage`/`resolveDispute` quedan deshabilitados hasta el orquestador.
 
-## F4 — P2P por alias con ERC-20 ☐
+## F4 — P2P por alias con ERC-20 ✅
 
-- [ ] `aliases` (store): agregar `walletAddress` asociada al alias (se registra al crear/reclamar alias)
-- [ ] `useTransfers` rama chain: `transfer` del MockARS/MockUSDC a la address del destinatario
-- [ ] `/enviar` chain mode: resolver alias → address, send on-chain, feedback con "Comprobante #ID" (nunca hash)
-- [ ] "Recibir": el QR personal codifica `/enviar?to=<alias>` (sin exponer `0x…` en la UI)
+- [x] `AliasRecord.walletAddress` — se guarda al registrar el alias en chain mode; re-registro con address inválida **conserva** la almacenada (no pisa); "sanación" silenciosa en `useTransfers` para aliases viejos sin address
+- [x] `GET /api/aliases?alias=` devuelve `walletAddress` (viaja para el sender, nunca se renderiza)
+- [x] `POST /api/transfers` acepta `chain:true` + `txRef` — archiva el comprobante sin tocar balances mock (los fondos ya se movieron on-chain); mantiene `alias_not_found` y `self_transfer`
+- [x] `useTransfers.send` rama chain: resuelve alias → `walletAddress` → `transfer` ERC-20 (MockARS/MockUSDC) → archiva comprobante `tr-…` con `txRef` interno; errores `recipient_not_ready`/`alias_not_found`/`self_transfer`/`transfer_error`
+- [x] `useGasFaucet` montado en `useTransfers` — top-up silencioso de MON antes del envío
+- [x] `SendMoneyForm`: error `recipient_not_ready` → "Ese usuario todavía no puede recibir pagos."
+- [x] "Recibir": el QR personal ya codifica `/enviar?to=<alias>` — sin `0x…` en UI ✅ (ya existía)
+- [x] `npm run build` verde + smoke: alias con address 200, re-registro conserva, chain:true no mueve balances, 404/400, history incluye ambos modos
 
 ## F5 — Actividad unificada + cierre ☐
 

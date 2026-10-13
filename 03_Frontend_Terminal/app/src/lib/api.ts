@@ -144,7 +144,9 @@ export const seedBalances = (userId: string, balances: BalancesShape) =>
 
 export const resolveAlias = (alias: string) =>
   fetch(`/api/aliases?alias=${encodeURIComponent(alias)}`).then((r) =>
-    r.ok ? json<{ alias: string; displayName: string }>(r) : null,
+    r.ok
+      ? json<{ alias: string; displayName: string; walletAddress?: string }>(r)
+      : null,
   );
 
 export const fetchMyAlias = (userId: string) =>
@@ -156,6 +158,7 @@ export const registerAlias = async (body: {
   userId: string;
   alias: string;
   displayName: string;
+  walletAddress?: string;
 }): Promise<{ alias?: UserAlias; error?: string }> => {
   const r = await fetch('/api/aliases', {
     method: 'POST',
@@ -184,6 +187,9 @@ export const sendTransfer = async (body: {
   amount: number;
   currency: Currency;
   note?: string;
+  /** chain:true → funds already moved on-chain; server only files the receipt. */
+  chain?: boolean;
+  txRef?: string;
 }): Promise<{ transfer?: Transfer; error?: string }> => {
   const r = await fetch('/api/transfers', {
     method: 'POST',

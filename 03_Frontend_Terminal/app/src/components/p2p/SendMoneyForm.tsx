@@ -80,7 +80,9 @@ export default function SendMoneyForm({ initialAlias, onSent, onError }: Props) 
           ? 'Saldo insuficiente para esa cartera.'
           : error === 'self_transfer'
             ? 'No podés enviarte dinero a vos mismo.'
-            : 'No se pudo procesar la solicitud, intentá nuevamente.',
+            : error === 'recipient_not_ready'
+              ? 'Ese usuario todavía no puede recibir pagos.'
+              : 'No se pudo procesar la solicitud, intentá nuevamente.',
       );
     }
   };

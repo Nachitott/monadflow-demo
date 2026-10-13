@@ -78,3 +78,9 @@ BitÃ¡cora de trabajo para este perfil.
 - `/acuerdo/[id]`: depositar → ensureApproval + createProject → link-chain; approve/cancel on-chain con refreshBalances (sin updateBalance al mock en chain mode); "Liberar por vencimiento" cuando vence el timer; errores con copy genérico es-AR.
 - Semántica contract≠mock documentada en TASK_BACKLOG2 (depósito atómico, sin luz verde, cancel con reembolso de entregadas-no-aprobadas, disputas off — agent=0x0).
 - Verificado: tsc + build verdes; smoke API: link-chain 400/200/409, ciclo mock completo sin regresión, rutas 200.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F4: P2P por alias con ERC-20
+- `AliasRecord.walletAddress` + POST /api/aliases lo persiste (regex ^0x[0-9a-fA-F]{40}$; re-registro inválido conserva la guardada). GET ?alias= la expone al sender (nunca en UI). Sanación silenciosa: `useTransfers.refresh` re-registra el alias propio si falta address en chain mode.
+- `POST /api/transfers` con `chain:true` + `txRef`: archiva comprobante `tr-…` sin tocar balances mock (fondos ya movidos on-chain). Mantiene 404 alias_not_found / 400 self_transfer.
+- `useTransfers.send` dual: chain → resolveAlias → `transfer` ERC-20 (erc20Abi) a walletAddress → sendTransfer(chain:true, txRef). `useGasFaucet` dentro del seam. Errores nuevos: recipient_not_ready (alias sin address) → "Ese usuario todavía no puede recibir pagos."
+- Verificado: tsc + build verdes; smoke: registro con address, conservación en re-registro, chain:true sin mutar balances, errores, historial con ambos modos.

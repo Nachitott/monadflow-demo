@@ -78,6 +78,8 @@ export interface AliasRecord {
   alias: string; // 'nacho.mp' — unique, lowercase
   userId: string;
   displayName: string;
+  /** Embedded wallet behind the alias — set in chain mode. Never rendered. */
+  walletAddress?: string;
 }
 
 /**
