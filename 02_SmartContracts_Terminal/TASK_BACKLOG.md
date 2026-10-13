@@ -7,8 +7,8 @@
 - [x] Fase 0: Capa de Moneda (MockUSDC / MockARS / MockExchange)
 - [x] Fase 1: Entorno de Desarrollo y Estructuras Core
 - [x] Fase 2: Implementación de TimeStream.sol (Modo 1)
-- [ ] Fase 3: Implementación de MilestoneEscrow.sol (Modo 2)
-- [ ] Fase 4: Killswitch, Account Abstraction y hooks del Agente Orquestador
+- [x] Fase 3: Implementación de MilestoneEscrow.sol (Modo 2)
+- [x] Fase 4: Killswitch, Account Abstraction y hooks del Agente Orquestador
 - [ ] Fase 5: Pruebas de Carga en Foundry y Exportación de ABIs
 
 ---
@@ -72,57 +72,59 @@
 
 ---
 
-## 📌 Módulo 2: MilestoneEscrow.sol (Cobro Garantizado por Etapas)
-- [ ] **Estructuras:**
+## 📌 Módulo 2: MilestoneEscrow.sol (Cobro Garantizado por Etapas) — ✅ Completado 2026-10-13
+- [x] **Estructuras:**
   - `Milestone { description, amount, deliveredAt, approvedAt }`.
   - `Project { id, client, contractor, agent, totalAmount, currency, totalStages, currentStage, autoReleaseSeconds, createdAt, status }`.
   - `ProjectStatus { Active, Completed, Cancelled, Disputed }`.
-- [ ] **`createProject(contractor, agent, totalStages, autoReleaseDays, currency, stageDescriptions[], stageAmounts[])`:**
+- [x] **`createProject(contractor, agent, totalStages, autoReleaseDays, currency, stageDescriptions[], stageAmounts[])`:**
   - `agent` puede ser `address(0)` (sin árbitro → sin disputas on-chain).
-  - `safeTransferFrom` del 100% (`sum(stageAmounts)` validado contra largos).
-  - Emite `ProjectCreated`.
-- [ ] **`deliverStage(projectId, stageIndex)` (nuevo):**
-  - Solo `contractor`. Marca `deliveredAt` → arranca el timer de auto-release. Emite `StageDelivered`.
-- [ ] **`approveStage(projectId, stageIndex)`:**
-  - Solo `client`, hito entregado y no aprobado. Transfiere fracción al `contractor`, avanza `currentStage`, última etapa → `Completed`. Emite `StageApproved`.
-- [ ] **`cancelProject(projectId)` — política Etapa 0 intocable:**
-  - Solo `client`. **Revert si `milestones[0].approvedAt == 0`** (compromiso sellado: el contratista siempre cobra la primera fracción).
-  - Reembolsa 100% de etapas no aprobadas al `client`. Emite `ProjectCancelled`.
-- [ ] **`disputeStage(projectId, stageIndex)` (nuevo):**
-  - `client` o `contractor`, `stageIndex > 0`, hito entregado y no aprobado, `agent != address(0)` → `Disputed`. Emite `ProjectDisputed`.
-- [ ] **`resolveDispute(projectId, stageIndex, contractorShareBps)` (nuevo — hook agente):**
-  - Solo `project.agent`. Reparte la fracción disputada. Vuelve a `Active`. Emite `DisputeResolved`.
-- [ ] **`claimAutoRelease(projectId)` — permissionless:**
-  - Si `deliveredAt + autoReleaseSeconds <= now` en la etapa actual, libera al contractor. Callable por keepers/agente. Emite `AutoReleased`.
+  - `safeTransferFrom` del 100% (`sum(stageAmounts)` validado contra largos y montos > 0).
+  - Emite `ProjectCreated`. Tracking: `clientProjects`/`contractorProjects`.
+- [x] **`deliverStage(projectId, stageIndex)` (nuevo):**
+  - Solo `contractor`, `stageIndex == currentStage` (secuencial, decisión v2.1). Marca `deliveredAt` → arranca el timer de auto-release. Emite `StageDelivered`.
+- [x] **`approveStage(projectId, stageIndex)`:**
+  - Solo `client`, hito entregado y no aprobado. Transfiere fracción al `contractor`, avanza `currentStage`, última etapa → `Completed`. Emite `StageApproved` + `ProjectCompleted`.
+- [x] **`cancelProject(projectId)` — política Etapa 0 intocable:**
+  - Solo `client`. **Revert `StageZeroLocked` si `milestones[0].approvedAt == 0`** (compromiso sellado).
+  - Reembolsa 100% de etapas no aprobadas al `client` (incl. entregadas-no-aprobadas). Emite `ProjectCancelled`.
+- [x] **`disputeStage(projectId, stageIndex)` (nuevo):**
+  - `client` o `contractor`, `stageIndex > 0`, hito entregado y no aprobado, `agent != address(0)` → `Disputed`. Bloquea approve/cancel/autoRelease hasta resolver. Emite `ProjectDisputed`.
+- [x] **`resolveDispute(projectId, stageIndex, contractorShareBps)` (nuevo — hook agente):**
+  - Solo `project.agent`, `contractorShareBps <= 10000`. Reparte la fracción disputada (hito queda liquidado), vuelve a `Active` o `Completed` si era la última. Emite `DisputeResolved`.
+- [x] **`claimAutoRelease(projectId)` — permissionless:**
+  - Si `deliveredAt + autoReleaseSeconds <= now` en la etapa actual, libera al contractor. Requiere `autoReleaseSeconds > 0` (0 = timer off, decisión v2.1). Callable por keepers/agente. Emite `AutoReleased`.
+- [x] **`test/MilestoneEscrow.t.sol`: 34 tests, 100% pass** — log: `test_logs/2026-10-13_modulo2_forge_test.log`.
 
 ---
 
-## 📌 Módulo 3: Killswitch & Admin
-- [ ] `MerchantProfile.disabled` (key `address merchant`) en TimeStream — unificado, no por `qrId`.
-- [ ] Funciones de desactivación restringidas al merchant (`msg.sender`).
-- [ ] `startStream` revierte si el merchant está desactivado.
-- [ ] `MockExchange.setRate` restringido a `owner` (Ownable OZ).
+## 📌 Módulo 3: Killswitch & Admin — ✅ Completado (cubierto por Módulos 0–2)
+- [x] `MerchantProfile.disabled` (key `address merchant`) en TimeStream — unificado, no por `qrId`.
+- [x] Funciones de desactivación restringidas al merchant (`msg.sender`).
+- [x] `startStream` revierte si el merchant está desactivado.
+- [x] `MockExchange.setRate` restringido a `owner` (Ownable OZ).
 
 ---
 
-## 📌 Módulo 4: Account Abstraction (ERC-4337 / Session Keys)
-- [ ] Contratos **account-agnostic**: operan sobre `msg.sender` (Smart Account del usuario). NO validar firmas de usuario dentro de los contratos.
-- [ ] Session Keys configuradas en la capa de cuenta (ZeroDev/Biconomy) con scopes: `startStream`, `stopStream`, `approveStage` con límites de gasto — firma silenciosa para el usuario y delegación futura al agente.
-- [ ] EIP-712 **únicamente** para `RateVoucher` del comercio en `startStream` (ECDSA.recover sobre typed data).
-- [ ] Paymaster: todas las ops del usuario gasless.
+## 📌 Módulo 4: Account Abstraction (ERC-4337 / Session Keys) — ✅ Lado contratos
+- [x] Contratos **account-agnostic**: operan sobre `msg.sender` (Smart Account del usuario). NO validan firmas de usuario — verificado en los 3 contratos.
+- [~] Session Keys configuradas en la capa de cuenta (ZeroDev/Biconomy) con scopes: `startStream`, `stopStream`, `approveStage` con límites de gasto — **off-chain**, pendiente de integración frontend/AA (sin trabajo en contratos).
+- [x] EIP-712 **únicamente** para `RateVoucher` del comercio en `startStream` (ECDSA.recover sobre typed data).
+- [~] Paymaster: todas las ops del usuario gasless — **off-chain**, pendiente de bundler/paymaster (sin trabajo en contratos).
 
 ---
 
-## 📌 Módulo 5: Hooks Agente Orquestador (dejar listo, no implementar servicio)
-- [ ] Verificar que `stopStream` (cap agotado) y `claimAutoRelease` sean permissionless para keepers.
-- [ ] Rol `agent` por proyecto funcional (`resolveDispute` testeado).
-- [ ] Todos los eventos con `indexed` en actor + id (listener-friendly).
-- [ ] Referencia: `06_Agent_Orchestrator/SPEC_ORQUESTADOR.md`.
+## 📌 Módulo 5: Hooks Agente Orquestador (dejar listo, no implementar servicio) — ✅ Listo
+- [x] `stopStream` (cap agotado) y `claimAutoRelease` son permissionless para keepers — testeado con `stranger`.
+- [x] Rol `agent` por proyecto funcional (`resolveDispute` testeado: shares, bloqueo, completado).
+- [x] Todos los eventos con `indexed` en actor + id (listener-friendly).
+- [x] Referencia: `06_Agent_Orchestrator/SPEC_ORQUESTADOR.md`.
 
 ---
 
 ## 📌 Módulo 6: Testing & ABIs Output
-- [ ] `MockExchange.t.sol`: swaps en ambas direcciones, rate correcto, setRate solo owner.
-- [ ] `TimeStream.t.sol`: escrow y refund, cap agotado con stop por tercero, killswitch, voucher válido/expirado/firmante inválido.
-- [ ] `MilestoneEscrow.t.sol`: etapa 0 intocable (revert cancel pre-pago), ciclo deliver→approve, auto-release post-timer, dispute→resolve por agent, cancelación post-etapa-0.
+- [x] `MockExchange.t.sol`: swaps en ambas direcciones, rate correcto, setRate solo owner. *(13 tests)*
+- [x] `TimeStream.t.sol`: escrow y refund, cap agotado con stop por tercero, killswitch, voucher válido/expirado/firmante inválido. *(25 tests)*
+- [x] `MilestoneEscrow.t.sol`: etapa 0 intocable (revert cancel pre-pago), ciclo deliver→approve, auto-release post-timer, dispute→resolve por agent, cancelación post-etapa-0. *(34 tests — 72 totales)*
 - [ ] Generar script de exportación automática de ABIs compiladas hacia `02_SmartContracts_Terminal/ABIs/`.
+- [ ] `script/Deploy.s.sol` + stress tests (Fase 5 restante).

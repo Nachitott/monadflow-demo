@@ -154,7 +154,7 @@ contract TimeStreamTest is Test {
 
     function test_StopStreamByUser() public {
         bytes32 sessionId = _startDefault();
-        vm.warp(block.timestamp + 60); // 60s * 1e4 = 6e5 (0.6 USD)
+        vm.warp(vm.getBlockTimestamp() + 60); // 60s * 1e4 = 6e5 (0.6 USD)
 
         uint256 expectedPaid = 60 * RATE_USD;
         uint256 expectedRefund = MAX_CAP - expectedPaid;
@@ -178,7 +178,7 @@ contract TimeStreamTest is Test {
 
     function test_StopStreamByMerchant() public {
         bytes32 sessionId = _startDefault();
-        vm.warp(block.timestamp + 30);
+        vm.warp(vm.getBlockTimestamp() + 30);
 
         vm.prank(merchant);
         uint256 totalPaid = timeStream.stopStream(sessionId);
@@ -188,7 +188,7 @@ contract TimeStreamTest is Test {
     function test_StopStreamCapExhaustedByAnyone() public {
         bytes32 sessionId = _startDefault();
         // cap = 10e6, rate = 1e4/s → cap agotado a los 1000s
-        vm.warp(block.timestamp + 1000);
+        vm.warp(vm.getBlockTimestamp() + 1000);
 
         vm.prank(stranger); // cualquiera puede cerrar si el cap se agotó
         uint256 totalPaid = timeStream.stopStream(sessionId);
@@ -200,7 +200,7 @@ contract TimeStreamTest is Test {
 
     function test_RevertStopStrangerBeforeCap() public {
         bytes32 sessionId = _startDefault();
-        vm.warp(block.timestamp + 10); // cap no agotado
+        vm.warp(vm.getBlockTimestamp() + 10); // cap no agotado
 
         vm.expectRevert(TimeStream.NotAuthorized.selector);
         vm.prank(stranger);
@@ -251,7 +251,7 @@ contract TimeStreamTest is Test {
         vm.prank(merchant);
         timeStream.deactivateQR();
 
-        vm.warp(block.timestamp + 45);
+        vm.warp(vm.getBlockTimestamp() + 45);
         vm.prank(user);
         uint256 totalPaid = timeStream.stopStream(sessionId);
         assertEq(totalPaid, 45 * RATE_USD); // cierra normal
@@ -358,7 +358,7 @@ contract TimeStreamTest is Test {
         vm.prank(user);
         bytes32 sessionId = timeStream.startStream(otherMerchant, capArs, CurrencyType.ARS, "");
 
-        vm.warp(block.timestamp + 60); // 60s * 0.5 = 30 ARS
+        vm.warp(vm.getBlockTimestamp() + 60); // 60s * 0.5 = 30 ARS
         vm.prank(user);
         uint256 totalPaid = timeStream.stopStream(sessionId);
 
@@ -373,11 +373,11 @@ contract TimeStreamTest is Test {
         bytes32 sessionId = _startDefault();
         assertEq(timeStream.accruedAmount(sessionId), 0);
 
-        vm.warp(block.timestamp + 120);
+        vm.warp(vm.getBlockTimestamp() + 120);
         assertEq(timeStream.accruedAmount(sessionId), 120 * RATE_USD);
 
         // más allá del cap → devuelve cap
-        vm.warp(block.timestamp + 2000);
+        vm.warp(vm.getBlockTimestamp() + 2000);
         assertEq(timeStream.accruedAmount(sessionId), MAX_CAP);
 
         vm.prank(user);

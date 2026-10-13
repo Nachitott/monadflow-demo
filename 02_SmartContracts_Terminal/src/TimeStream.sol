@@ -163,6 +163,7 @@ contract TimeStream is EIP712, ReentrancyGuard {
             ratePerSecond = _resolveVoucher(merchant, currency, voucher);
         }
 
+        // forge-lint: disable-next-line(weak-prng) — ID único por nonce+timestamp, no es RNG de seguridad
         sessionId = keccak256(abi.encode(msg.sender, merchant, nonce++, block.timestamp));
         sessions[sessionId] = StreamSession({
             id: sessionId,
@@ -180,6 +181,7 @@ contract TimeStream is EIP712, ReentrancyGuard {
         userSessions[msg.sender].push(sessionId);
         merchantSessions[merchant].push(sessionId);
 
+        // forge-lint: disable-next-line(reentrancy-events) — el "external call" previo es ecrecover (precompile, no reentra)
         emit StreamStarted(sessionId, msg.sender, merchant, ratePerSecond, maxCap, currency);
 
         _currencyToken(currency).safeTransferFrom(msg.sender, address(this), maxCap);

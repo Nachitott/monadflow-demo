@@ -40,3 +40,9 @@ Registro de errores y soluciones.
 - **Mensaje:** `[FAIL: Transfer != expected StreamStarted]` en `test_StartStreamRegistry`.
 - **Causa raíz:** `expectEmit(true, true, true, true)` compara topic1 (`sessionId`) contra `bytes32(0)` placeholder — el id real se deriva dentro de la llamada (`keccak256(user, merchant, nonce, timestamp)`) y no se conoce antes.
 - **Solución:** `expectEmit(false, true, true, true)` — se verifican actor (`user`, `merchant`) y data; topic1 se omite cuando el valor no es predecible. Patrón aplicable a todos los eventos con id generado on-chain.
+
+### E7 — Config del linter de forge 1.8: `ignore` no existe, es `exclude_lints`
+- **Mensaje:** `[lint] ignore = [...]` en `foundry.toml` no tuvo efecto — warnings seguían apareciendo tras rebuild.
+- **Causa raíz:** la clave correcta del project config es `exclude_lints` (verificado con `forge lint --help`); además existe supresión inline `// forge-lint: disable-next-line(<lint-id>)`.
+- **Solución aplicada:** `exclude_lints = ["block-timestamp"]` global (producto inherentemente basado en tiempo) + suppressions inline puntuales: `weak-prng` en derivación de IDs (son IDs, no RNG), `reentrancy-events` tras ecrecover (precompile no reentra), `require-revert-in-loop` en loop acotado. Fixes de código: `= 0` explícitos y `vm.getBlockTimestamp()` en warps de tests. `forge lint` final vacío.
+- **Nota menor:** se detectó y corrigió un soft-hyphen (U+00AD) en un comentario de `MilestoneEscrow.sol` — caracteres invisibles en comentarios pueden romper tooling.

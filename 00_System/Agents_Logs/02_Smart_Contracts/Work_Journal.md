@@ -89,3 +89,31 @@ Módulo 1: `TimeStream.sol` (registry de tarifas, voucher EIP-712, escrow de max
 
 ### Próximo paso sugerido
 Módulo 2: `MilestoneEscrow.sol` (depósito 100%, etapa 0 intocable, deliver/approve/auto-release, disputa con agent) + `MilestoneEscrow.t.sol`.
+
+---
+
+## 2026-10-13 (continuación 2) — Módulo 2: MilestoneEscrow.sol ✅ (+ Módulos 3–5 lado contratos)
+
+### Trabajo ejecutado
+- `src/MilestoneEscrow.sol` — Modo 2 completo según spec v2.0:
+  - `createProject`: depósito 100% upfront, validaciones (arrays alineados, montos > 0, contractor ≠ client/0), tracking `clientProjects`/`contractorProjects`.
+  - `deliverStage` secuencial (`stageIndex == currentStage`, decisión v2.1) → arranca timer.
+  - `approveStage` 1-clic + `claimAutoRelease` permissionless (guard `autoReleaseSeconds > 0`).
+  - `cancelProject`: **Etapa 0 intocable** (`StageZeroLocked` si `milestones[0].approvedAt == 0`); refund 100% de etapas no liquidadas.
+  - `disputeStage` (>0, entregada, `agent != 0`) → `resolveDispute` solo `project.agent` con `contractorShareBps` — hook del orquestador.
+  - Views: `getProject`, `getMilestones`, `getClientProjects`, `getContractorProjects`.
+- `test/MilestoneEscrow.t.sol` — **34 tests, 100% pass** (72 totales del repo).
+- Lint forge 1.8: inicializadores explícitos + `vm.getBlockTimestamp()` en tests + supresiones inline `// forge-lint: disable-next-line(...)` para patrones spec-mandated + `[lint] exclude_lints = ["block-timestamp"]` documentado en foundry.toml (ver Error_Index E7). Build y lint finales **sin warnings**.
+- `TASK_BACKLOG.md`: Módulos 2, 3 (cubierto), 4 (lado contratos) y 5 marcados; queda Fase 5 (stress + Deploy.s.sol + ABIs).
+
+### Estado DoD
+| Punto | Estado |
+|---|---|
+| Build limpio | ✅ sin errores ni warnings (forge lint vacío) |
+| Tests 100% | ✅ 72/72 — account-agnostic confirmado (sin firma de usuario en contratos) |
+| Confirmación <1s en Monad | ⏸️ pendiente deploy |
+| Gasless/paymaster | ⏸️ por diseño (capa ERC-4337) |
+| Logs | ✅ |
+
+### Próximo paso sugerido
+Fase 5: `script/Deploy.s.sol`, `script/export-abis.sh`, stress tests de carga (múltiples sesiones/proyectos concurrentes) y export de ABIs a `ABIs/`.
