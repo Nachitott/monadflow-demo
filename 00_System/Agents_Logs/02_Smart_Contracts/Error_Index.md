@@ -51,3 +51,9 @@ Registro de errores y soluciones.
 - **Mensaje:** `ABIs/*.json` quedaban con contenido de tabla ASCII (`Type | Signature | ...`) en vez de JSON — archivos inválidos para consumo por viem/wagmi.
 - **Causa raíz:** forge 1.8.4 pretty-printe la salida de `forge inspect` por defecto.
 - **Solución:** flag `--json` → `forge inspect <path>:<name> abi --json`. Validado con `require()` en Node: las 5 ABIs parsean como arrays JSON correctos.
+
+### E9 — `check-by-addresses` de Sourcify-Monad rechaza comas sin encodear
+- **Mensaje:** `{"message":"Parameter 'addresses' must be url encoded. Its value may not contain reserved characters."}` al consultar `check-by-addresses?addresses=0xA,0xB,...`.
+- **Causa raíz:** la API de BlockVision exige RFC3986 estricto — las comas del listado deben ir como `%2C`.
+- **Solución:** URL-encodear las comas (`addresses=0xA%2C0xB%2C...`). Devolvió `status: "perfect"` para los 5 contratos → confirmación server-side de la verificación.
+- **Nota relacionada:** `testnet.monadexplorer.com` hace redirect 308 a `testnet.monadvision.com`; el verificador soportado es Sourcify (`sourcify-api-monad.blockvision.org`), no Etherscan-compatible. Monadscan requeriría `ETHERSCAN_API_KEY` (no disponible — queda opcional).

@@ -143,3 +143,30 @@ Fase 5: `script/Deploy.s.sol`, `script/export-abis.sh`, stress tests de carga (m
 
 ### Estado general del dominio
 Los 5 contratos del spec v2.0 están implementados, testeados y con ABIs exportadas. El dominio queda listo para: (a) deploy a testnet cuando haya credenciales, (b) handoff de ABIs al Agente 03 (frontend).
+
+---
+
+## 2026-10-13 — Sesión 3: TASK_BACKLOG_DEMO — F1/F2/F3 completos ✅
+
+### Trabajo ejecutado
+- **Suite completa re-verificada:** `forge test` → **77/77 pass**. Log: `test_logs/2026-10-13_demo_f0_forge_test.log`.
+- **F1 — Verificación en explorer:** los 5 contratos verificados con `forge verify-contract --verifier sourcify --verifier-url https://sourcify-api-monad.blockvision.org/ --chain-id 10143` → todos `exact_match`. `testnet.monadexplorer.com` redirige (308) a MonadVision, cuyo backend de verificación es ese servicio Sourcify — sin API key. Confirmado server-side vía `check-by-addresses` (5/5 `status: "perfect"`). Columna "Verificado" de `Contract_Addresses.md` → ✅ + nota de método. Espejo en Monadscan (Etherscan) queda opcional — requiere `ETHERSCAN_API_KEY` no disponible.
+- **F2 — Consistencia de config:** verificado que `Monad_Testnet_Config.md` §D, `Contract_Addresses.md` y `app/.env.example` ya usan `NEXT_PUBLIC_CHAIN_MODE` y listan las 7 vars (5 addresses + flag + `GAS_FAUCET_PRIVATE_KEY` server-only). Único punto desalineado es `app/src/lib/chainMode.ts` (lee `NEXT_PUBLIC_CHAIN_ENABLED`) → fix asignado al Agente 03 en `TASK_BACKLOG3.md`. Sin cambios de mi parte.
+- **F3 — Evidencia jurado:**
+  - `.gitignore`: `broadcast/` deja de ignorarse (solo `*.recovery.lock` sigue fuera) → receipts del deploy real commiteables.
+  - `script/smoke-onchain.sh` — smoke on-chain reutilizable. Ejecutado en vivo contra testnet: lecturas de los 5 contratos + ciclo real TimeStream en ARS (`mint`→`approve`→`startStream`→`accruedAmount`→`stopStream`). Txs confirmadas: `0x1c9fe6ac…` mint, `0xee3512e9…` startStream, `0xe9cf9971…` stopStream (liquidó `9e15` de cap `10e18`, escrow drenado a 0). Log: `test_logs/2026-10-13_demo_f3_cast_smoke.log`.
+  - `SECURITY_CHECKLIST.md` — resumen de garantías para el pitch (CEI, ReentrancyGuard, escrow por sesión, etapa 0 intocable, matriz §3).
+- `TASK_BACKLOG_DEMO.md` → las 3 fases cerradas.
+- Todo el trabajo commiteado en rama dedicada `feat/02-demo-verification`.
+
+### Estado DoD
+| Punto | Estado |
+|---|---|
+| Build limpio | ✅ sin warnings |
+| Tests 100% | ✅ 77/77 |
+| Confirmación <1s en Monad | ✅ smoke on-chain: txs incluidas en bloques sucesivos de inmediato (testnet 10143) |
+| Gasless/paymaster | ⏸️ por diseño (capa ERC-4337; contratos account-agnostic) |
+| Logs | ✅ journal + error index + test_logs |
+
+### Estado general del dominio
+Backlog demo cerrado por completo. Contratos deployados, **verificados en explorer**, con evidencia on-chain commiteada y smoke en vivo reproducible (`bash script/smoke-onchain.sh`).
