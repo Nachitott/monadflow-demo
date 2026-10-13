@@ -32,6 +32,7 @@ import {
   mergeChainAgreement,
   useMilestoneEscrow,
 } from '@/lib/hooks/useMilestoneEscrow';
+import { reportEscrowStageEvents } from '@/lib/activityReport';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 const STATUS_LABEL: Record<Agreement['status'], { text: string; cls: string }> = {
@@ -67,9 +68,10 @@ export default function AcuerdoPage() {
     user?.google?.name ?? user?.apple?.email ?? user?.email?.address ?? 'Contratista';
 
   /** Records with chainId get their live state from the contract; drafts
-   *  (pre-deposit) stay off-chain. */
+   *  (pre-deposit) stay off-chain. Merging also files any stage events
+   *  the user's feed hasn't seen yet (sync-on-read, idempotent). */
   const mergeChain = useCallback(
-    async (list: Agreement[]): Promise<Agreement[]> => {
+    async (list: Agreement[], role: 'client' | 'contractor'): Promise<Agreement[]> => {
       if (!onChain) return list;
       const out: Agreement[] = [];
       for (const a of list) {
@@ -78,11 +80,13 @@ export default function AcuerdoPage() {
           continue;
         }
         const view = await escrow.getProjectView(a.chainId as Hex);
-        out.push(view ? mergeChainAgreement(a, view.project, view.milestones) : a);
+        const merged = view ? mergeChainAgreement(a, view.project, view.milestones) : a;
+        if (user?.id) reportEscrowStageEvents(merged, user.id, role);
+        out.push(merged);
       }
       return out;
     },
-    [onChain, escrow],
+    [onChain, escrow, user?.id],
   );
 
   const reload = useCallback(async () => {
@@ -91,8 +95,8 @@ export default function AcuerdoPage() {
       fetchAgreements({ contractor: user.id }),
       fetchAgreements({ client: user.id }),
     ]);
-    setMine(await mergeChain(m));
-    setAsClient(await mergeChain(c));
+    setMine(await mergeChain(m, 'contractor'));
+    setAsClient(await mergeChain(c, 'client'));
     setOrigin(window.location.origin);
   }, [user?.id, mergeChain]);
 

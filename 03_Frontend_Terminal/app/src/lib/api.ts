@@ -180,6 +180,26 @@ export const fetchActivity = (userId: string) =>
     json<ActivityItem[]>,
   );
 
+export interface ActivityPost {
+  userId: string;
+  kind: ActivityItem['kind'];
+  amount: number;
+  currency: Currency;
+  label?: string;
+  refId?: string;
+  /** Idempotency key — server skips duplicates per user. */
+  dedupeKey?: string;
+  /** Unix ms — lets chain events keep their real timestamp. */
+  at?: number;
+}
+
+export const postActivity = (body: ActivityPost) =>
+  fetch('/api/activity', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+
 export const sendTransfer = async (body: {
   fromUserId: string;
   fromName: string;

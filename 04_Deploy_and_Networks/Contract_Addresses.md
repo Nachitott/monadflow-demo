@@ -22,6 +22,12 @@ Este documento registra las direcciones de los contratos inteligentes desplegado
 * **RPC Used:** `https://testnet-rpc.monad.xyz`
 * **Script:** `script/Deploy.s.sol`
 
+> **Estado del frontend:** la app ya está *chain-ready* (fases F0–F5 de
+> `03_Frontend_Terminal/TASK_BACKLOG2.md` completas — hooks, ABIs y consumo
+> dual mock/on-chain implementados). Falta únicamente ejecutar `Deploy.s.sol`
+> y cargar las addresses en `NEXT_PUBLIC_*` + `NEXT_PUBLIC_CHAIN_MODE=1` para
+> activar el modo on-chain.
+
 ---
 
 ## 🔗 Archivos Relacionados (Obsidian Graph)

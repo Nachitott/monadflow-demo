@@ -73,12 +73,18 @@ La home ya puede cargar saldo real y leer balances/precio desde la chain.
 - [x] "Recibir": el QR personal ya codifica `/enviar?to=<alias>` — sin `0x…` en UI ✅ (ya existía)
 - [x] `npm run build` verde + smoke: alias con address 200, re-registro conserva, chain:true no mueve balances, 404/400, history incluye ambos modos
 
-## F5 — Actividad unificada + cierre ☐
+## F5 — Actividad unificada + cierre ✅
 
-- [ ] `POST /api/activity` — endpoint para registrar eventos on-chain (mint/depósito, stream start/stop, escrow deposit/release/refund, transfer P2P) junto a los mock
-- [ ] Integrar el POST en cada flujo chain para que el feed unificado muestre ambos mundos sin duplicados
-- [ ] `.env.example` completo: `NEXT_PUBLIC_CHAIN_MODE`, addresses de los 5 contratos, `GAS_FAUCET_PRIVATE_KEY` (solo server)
-- [ ] Actualizar docs: `TASK_BACKLOG.md` (puntero a este archivo), `04_Deploy_and_Networks/`, contexto si cambian decisiones
+- [x] `POST /api/activity` — registra eventos on-chain (`consumo`, `escrow_release`, `escrow_payment`, `escrow_refund`, etc.) con `dedupeKey` idempotente, `label`/`refId`/`at` propios; `ActivityRecord` extendido y GET mapea `kind`→`direction`/`label`/`refId`
+- [x] Integración por flujo (feed muestra ambos mundos sin duplicados):
+  - **Consumo chain** → `consumo` al finalizar (`dedupeKey: stream:{sessionId}`)
+  - **Escrow** → `reportEscrowStageEvents` (sync-on-read en `/acuerdo` y `/acuerdo/[id]`): cliente→`escrow_release`, contratista→`escrow_payment`; `escrow_refund` explícito al cancelar
+  - **Transfers chain** → ya cubiertos por `POST /api/transfers chain:true` (derivados en el feed)
+  - **Mint/carga** → ya cubierto por `updateBalance(reason:'deposit')` → `/api/balances` loguea `deposit`
+  - Guard local `mf:actrep` en localStorage evita POSTs repetidos; el server dedupua igual por `(userId, dedupeKey)`
+- [x] `.env.example` completo: `NEXT_PUBLIC_CHAIN_MODE`, addresses de los 5 contratos, `GAS_FAUCET_PRIVATE_KEY` (solo server) — hecho en F0
+- [x] Docs: puntero en `TASK_BACKLOG.md` → este archivo; `Monad_Testnet_Config.md` §D con las vars del modo on-chain; `Contract_Addresses.md` con nota "frontend chain-ready" (deploy sigue pendiente)
+- [x] `npm run build` verde + smoke del POST (201/409-dedupe/400s)
 
 ## Final — Verificación y deploy ☐
 

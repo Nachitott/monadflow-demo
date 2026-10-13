@@ -94,6 +94,14 @@
 
 ---
 
+---
+
+> **➡️ Migración on-chain:** el paso a ejecución real sobre los contratos de
+> `02_SmartContracts_Terminal/` se trackea en [[TASK_BACKLOG2.md]] (F0–F5 + deploy).
+> Este archivo cubre solo las fases del mock funcional.
+
+---
+
 ## �🎨 Fase 6: Componentes de Interfaz & Pulido Visual
 - [ ] Aplicar diseño Mobile-First enfocado en usabilidad en smartphones.
 - [ ] Sanitización estricta de textos: Garantizar cero uso de términos como "Gas", "Hex", "Hash", "USDC" o "Wallet" en la interfaz.

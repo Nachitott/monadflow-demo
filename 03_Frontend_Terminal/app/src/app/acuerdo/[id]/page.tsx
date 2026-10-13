@@ -29,6 +29,7 @@ import {
   mergeChainAgreement,
   useMilestoneEscrow,
 } from '@/lib/hooks/useMilestoneEscrow';
+import { reportActivity, reportEscrowStageEvents } from '@/lib/activityReport';
 import { formatAmount } from '@/lib/useExchangeRate';
 
 export default function AgreementDetailPage() {
@@ -50,16 +51,21 @@ export default function AgreementDetailPage() {
       setMissing(true);
       return;
     }
-    // Linked projects read their live state from the contract.
+    // Linked projects read their live state from the contract — and the
+    // sync-on-read reporter files any stage events the feed is missing.
     if (a.chainId && onChain) {
       const view = await escrow.getProjectView(a.chainId as Hex);
       if (view) {
-        setAgreement(mergeChainAgreement(a, view.project, view.milestones));
+        const merged = mergeChainAgreement(a, view.project, view.milestones);
+        setAgreement(merged);
+        const uid = user?.id;
+        if (uid && uid === a.clientId) reportEscrowStageEvents(merged, uid, 'client');
+        if (uid && uid === a.contractorId) reportEscrowStageEvents(merged, uid, 'contractor');
         return;
       }
     }
     setAgreement(a);
-  }, [id, onChain, escrow]);
+  }, [id, onChain, escrow, user?.id]);
 
   useEffect(() => {
     if (!ready || !authenticated) return;
@@ -215,6 +221,17 @@ export default function AgreementDetailPage() {
         await escrow.cancelProject(a.chainId as Hex);
         refreshBalances();
         await reload();
+        if (frozen > 0 && user?.id) {
+          reportActivity({
+            userId: user.id,
+            kind: 'escrow_refund',
+            amount: frozen,
+            currency: a.currency,
+            label: a.title,
+            refId: a.id,
+            dedupeKey: `escrowrefund:${a.chainId}`,
+          });
+        }
       } catch {
         setError('No se pudo procesar la solicitud, intentá nuevamente');
       } finally {

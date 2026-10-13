@@ -24,6 +24,7 @@ import {
   type ChainMerchant,
   type ChainSession,
 } from '@/lib/hooks/useMonadStream';
+import { reportActivity } from '@/lib/activityReport';
 import {
   accruedAmount,
   closeSession,
@@ -227,9 +228,23 @@ function ConsumoContent() {
     setStep('active');
   };
 
+  const reportChainCharge = (s: ChainSession, paid: number) => {
+    if (!user?.id || paid <= 0) return;
+    reportActivity({
+      userId: user.id,
+      kind: 'consumo',
+      amount: paid,
+      currency: s.currency,
+      label: merchantName,
+      dedupeKey: `stream:${s.id}`,
+      at: s.stopTime || Date.now(),
+    });
+  };
+
   const finishChain = (s: ChainSession) => {
     const secs = ((s.stopTime || Date.now()) - s.startTime) / 1000;
     const paid = s.totalPaid > 0 ? s.totalPaid : stream.accrued(s);
+    reportChainCharge(s, paid);
     setFinish({ paid, refunded: s.maxCap - paid, secs });
     setStep('summary');
   };
@@ -244,10 +259,12 @@ function ConsumoContent() {
           ? Number(settled.totalPaid) / 10 ** (currency === 'USD' ? 6 : 18)
           : stream.accrued(chainSession);
         const secs = (Date.now() - chainSession.startTime) / 1000;
+        reportChainCharge(chainSession, paid);
         setFinish({ paid, refunded: session.maxCap - paid, secs });
       } catch {
         const paid = stream.accrued(chainSession);
         const secs = (Date.now() - chainSession.startTime) / 1000;
+        reportChainCharge(chainSession, paid);
         setFinish({ paid, refunded: session.maxCap - paid, secs });
       } finally {
         setBusy(false);

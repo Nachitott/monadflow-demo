@@ -84,3 +84,10 @@ BitÃ¡cora de trabajo para este perfil.
 - `POST /api/transfers` con `chain:true` + `txRef`: archiva comprobante `tr-…` sin tocar balances mock (fondos ya movidos on-chain). Mantiene 404 alias_not_found / 400 self_transfer.
 - `useTransfers.send` dual: chain → resolveAlias → `transfer` ERC-20 (erc20Abi) a walletAddress → sendTransfer(chain:true, txRef). `useGasFaucet` dentro del seam. Errores nuevos: recipient_not_ready (alias sin address) → "Ese usuario todavía no puede recibir pagos."
 - Verificado: tsc + build verdes; smoke: registro con address, conservación en re-registro, chain:true sin mutar balances, errores, historial con ambos modos.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F5: actividad unificada chain + cierre docs
+- `POST /api/activity`: registra eventos chain con `dedupeKey` idempotente por (userId, key) + `label`/`refId`/`at`. `ActivityRecord` extendido (kind completo + campos opcionales); GET mapea kind→direction/label/refId.
+- `lib/activityReport.ts`: `reportActivity` (guard `mf:actrep` en localStorage + dedupe server como backstop) y `reportEscrowStageEvents` (sync-on-read: cliente→escrow_release, contratista→escrow_payment por etapa paga).
+- Integraciones: `/consumo` postea `consumo` al cerrar stream on-chain (dedupe `stream:{id}`); `/acuerdo` mergeChain y `/acuerdo/[id]` reload reportan etapas pagas; `escrow_refund` explícito al cancelar; transfers chain ya derivan vía `chain:true`; mint ya loguea `deposit` vía balances reason.
+- Docs: puntero TASK_BACKLOG→TASK_BACKLOG2; Monad_Testnet_Config §D vars chain-mode; Contract_Addresses nota "chain-ready" (deploy pendiente); .env.example ya completo desde F0.
+- Verificado: tsc + build verdes; smoke POST 201/dedupe/400s; feed mezcla mock+chain sin duplicados.

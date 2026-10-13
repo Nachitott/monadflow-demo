@@ -92,9 +92,23 @@ export interface AliasRecord {
 export interface ActivityRecord {
   id: string; // 'ac-...'
   userId: string;
-  kind: 'deposit';
+  kind:
+    | 'deposit'
+    | 'transfer_sent'
+    | 'transfer_received'
+    | 'consumo'
+    | 'escrow_deposit'
+    | 'escrow_release'
+    | 'escrow_payment'
+    | 'escrow_refund';
   amount: number;
   currency: Currency;
+  /** Counterparty/context shown in the feed (alias, title, merchant). */
+  label?: string;
+  /** Friendly id shown as "Comprobante #…" — never a tx hash. */
+  refId?: string;
+  /** Idempotency key — server skips the write when already present. */
+  dedupeKey?: string;
   createdAt: number;
 }
 
