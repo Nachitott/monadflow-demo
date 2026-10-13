@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
@@ -12,10 +12,18 @@ import {
   ScanLine,
   Square,
 } from 'lucide-react';
+import { isAddress, type Address, type Hex } from 'viem';
 import LiveStreamTimer from '@/components/stream/LiveStreamTimer';
 import QRScanner from '@/components/stream/QRScanner';
 import StreamSummaryCard from '@/components/stream/StreamSummaryCard';
 import { useBalances } from '@/lib/BalanceContext';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+import { chainReady } from '@/lib/contracts';
+import {
+  useMonadStream,
+  type ChainMerchant,
+  type ChainSession,
+} from '@/lib/hooks/useMonadStream';
 import {
   accruedAmount,
   closeSession,
@@ -26,30 +34,71 @@ import {
   type Merchant,
   type StreamSession,
 } from '@/lib/api';
-import { formatAmount } from '@/lib/useExchangeRate';
+import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 const QUICK_CAPS = [3000, 5000, 10000];
 
 type Step = 'scan' | 'cap' | 'active' | 'summary';
 
-export default function ConsumoPage() {
+/** Unified session shape for the timer/summary UI (display units). */
+interface ActiveSession {
+  id: string;
+  merchantName: string;
+  ratePerSecond: number;
+  maxCap: number;
+  startTime: number;
+  currency: Currency;
+}
+
+const toActive = (s: StreamSession | ChainSession, name: string): ActiveSession => ({
+  id: s.id,
+  merchantName: 'merchantName' in s ? s.merchantName : name,
+  ratePerSecond: s.ratePerSecond,
+  maxCap: s.maxCap,
+  startTime: s.startTime,
+  currency: s.currency,
+});
+
+function ConsumoContent() {
   const { ready, authenticated, user } = usePrivy();
   const params = useSearchParams();
   const { balances, updateBalance } = useBalances();
-  // The QR deep link carries the merchant code (?m=qr-xxx). Scanning the
-  // code resolves the same merchant the dashboard generated.
+  const stream = useMonadStream();
+  const onChain = CHAIN_ENABLED && chainReady;
+  // Mock QR carries ?m=qr-xxx; on-chain QR carries the merchant address.
   const scannedCode = params.get('m');
   const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [chainMerchant, setChainMerchant] = useState<ChainMerchant | null>(null);
   const [step, setStep] = useState<Step>(() => (scannedCode ? 'cap' : 'scan'));
   const [scanning, setScanning] = useState(false);
   const [capInput, setCapInput] = useState('5000');
-  const [session, setSession] = useState<StreamSession | null>(null);
+  const [session, setSession] = useState<ActiveSession | null>(null);
+  const [chainSession, setChainSession] = useState<ChainSession | null>(null);
   const [finish, setFinish] = useState<{ paid: number; refunded: number; secs: number } | null>(null);
   const [blocked, setBlocked] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const currency: Currency = onChain
+    ? (chainMerchant?.currency ?? 'ARS')
+    : 'ARS';
+  const balance = currency === 'USD' ? balances.USD : balances.ARS;
 
   // Resolve merchant once authenticated (direct QR link or manual scan).
   useEffect(() => {
-    if (!ready || !authenticated || merchant) return;
+    if (!ready || !authenticated) return;
+    if (onChain) {
+      if (!scannedCode || !isAddress(scannedCode) || chainMerchant) return;
+      stream.merchantProfile(scannedCode as Address).then((p) => {
+        if (!p || p.disabled || p.ratePerSecond === 0) {
+          setBlocked(true);
+          setStep('scan');
+        } else {
+          setChainMerchant(p);
+        }
+      });
+      return;
+    }
+    if (merchant) return;
     fetchMerchant().then((m) => {
       setMerchant(m);
       if (scannedCode && (m.qrId !== scannedCode || !m.active)) {
@@ -57,20 +106,46 @@ export default function ConsumoPage() {
         setStep('scan');
       }
     });
-  }, [ready, authenticated, merchant, scannedCode]);
+  }, [ready, authenticated, merchant, chainMerchant, scannedCode, onChain, stream]);
 
   // If this user already has an open consumption (e.g. they navigated
   // away or re-scanned the QR), resume it instead of starting a new one.
   useEffect(() => {
     if (!ready || !authenticated || !user?.id) return;
+    if (onChain) {
+      stream.myActiveSession().then((s) => {
+        if (s) {
+          setChainSession(s);
+          setSession(toActive(s, 'Comercio'));
+          setStep('active');
+        }
+      });
+      return;
+    }
     fetchMyActiveSession(user.id).then((s) => {
       if (s) {
-        setSession(s);
+        setSession(toActive(s, s.merchantName));
         setStep('active');
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated, user?.id]);
+
+  // Poll the session so a merchant-side stop settles the UI too.
+  useEffect(() => {
+    if (step !== 'active' || !session) return;
+    const id = setInterval(async () => {
+      if (onChain && chainSession) {
+        const s = await stream.getSession(chainSession.id);
+        if (s && !s.active) finishChain(s);
+        return;
+      }
+      const s = await fetchSession(session.id);
+      if (s?.ended) handleFinish();
+    }, 3_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, session, chainSession, onChain]);
 
   if (!ready) {
     return (
@@ -90,12 +165,27 @@ export default function ConsumoPage() {
 
   const cap = Number(capInput.replace(',', '.')) || 0;
   const capValid = cap > 0;
-  const enoughBalance = balances.ARS >= cap;
+  const enoughBalance = balance >= cap;
+
+  const merchantName = onChain ? 'Comercio' : (merchant?.name ?? 'Comercio');
+  const merchantRate = onChain
+    ? (chainMerchant?.ratePerSecond ?? 0)
+    : (merchant?.ratePerMinute ?? 0) / 60;
 
   const resolveMerchant = async (code: string | null) => {
+    setScanning(false);
+    if (onChain) {
+      const addr = code && isAddress(code) ? (code as Address) : null;
+      const p = addr ? await stream.merchantProfile(addr) : null;
+      if (!p || p.disabled || p.ratePerSecond === 0) setBlocked(true);
+      else {
+        setChainMerchant(p);
+        setStep('cap');
+      }
+      return;
+    }
     const m = await fetchMerchant();
     setMerchant(m);
-    setScanning(false);
     if (!m.active || (code && m.qrId !== code)) setBlocked(true);
     else setStep('cap');
   };
@@ -103,20 +193,26 @@ export default function ConsumoPage() {
   const handleScanResult = (code: string) => resolveMerchant(code);
   const handleManualEntry = () => resolveMerchant(null);
 
-  // If the merchant regenerates the QR, the server closes our session —
-  // poll its state and finish locally, refunding the unused cap.
-  useEffect(() => {
-    if (step !== 'active' || !session) return;
-    const id = setInterval(async () => {
-      const s = await fetchSession(session.id);
-      if (s?.ended) handleFinish();
-    }, 2_000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, session]);
-
   const handleStart = async () => {
-    if (!capValid || !enoughBalance || !merchant) return;
+    if (!capValid || !enoughBalance || busy) return;
+    if (onChain) {
+      if (!chainMerchant) return;
+      setBusy(true);
+      try {
+        const id = await stream.startStream(chainMerchant.address, cap, currency);
+        const s = await stream.getSession(id);
+        if (s) {
+          setChainSession(s);
+          setSession(toActive(s, merchantName));
+          setStep('active');
+        }
+      } catch {
+        setBlocked(true);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const { session: s, resumed } = await createSession({
       userId: user?.id ?? 'anon',
       userName:
@@ -127,17 +223,46 @@ export default function ConsumoPage() {
     // Hold the full cap only on a fresh session — a resumed one already
     // had its cap deducted when it was created.
     if (!resumed) updateBalance(-cap, 'ARS');
-    setSession(s);
+    setSession(toActive(s, s.merchantName));
     setStep('active');
   };
 
-  const handleFinish = () => {
-    if (!session) return;
-    const paid = accruedAmount(session);
+  const finishChain = (s: ChainSession) => {
+    const secs = ((s.stopTime || Date.now()) - s.startTime) / 1000;
+    const paid = s.totalPaid > 0 ? s.totalPaid : stream.accrued(s);
+    setFinish({ paid, refunded: s.maxCap - paid, secs });
+    setStep('summary');
+  };
+
+  const handleFinish = async () => {
+    if (!session || busy) return;
+    if (onChain && chainSession) {
+      setBusy(true);
+      try {
+        const settled = await stream.stopStream(chainSession.id);
+        const paid = settled
+          ? Number(settled.totalPaid) / 10 ** (currency === 'USD' ? 6 : 18)
+          : stream.accrued(chainSession);
+        const secs = (Date.now() - chainSession.startTime) / 1000;
+        setFinish({ paid, refunded: session.maxCap - paid, secs });
+      } catch {
+        const paid = stream.accrued(chainSession);
+        const secs = (Date.now() - chainSession.startTime) / 1000;
+        setFinish({ paid, refunded: session.maxCap - paid, secs });
+      } finally {
+        setBusy(false);
+      }
+      setStep('summary');
+      return;
+    }
+    const paid = Math.min(
+      ((Date.now() - session.startTime) / 1000) * session.ratePerSecond,
+      session.maxCap,
+    );
     const secs = (Date.now() - session.startTime) / 1000;
     const refunded = session.maxCap - paid;
     closeSession(session.id, paid);
-    updateBalance(refunded, 'ARS');
+    updateBalance(refunded, session.currency);
     setFinish({ paid, refunded, secs });
     setStep('summary');
   };
@@ -185,14 +310,14 @@ export default function ConsumoPage() {
         </div>
       )}
 
-      {step === 'cap' && merchant && (
+      {step === 'cap' && (onChain ? chainMerchant : merchant) && (
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex items-center gap-3 rounded-2xl bg-slate-900 p-4">
             <QrCode className="h-8 w-8 text-emerald-400" />
             <div>
-              <p className="font-semibold">{merchant.name}</p>
+              <p className="font-semibold">{merchantName}</p>
               <p className="font-mono text-xs text-slate-400">
-                {formatAmount(merchant.ratePerMinute * 60, 'ARS')} por hora
+                {formatAmount(merchantRate * 3600, currency)} por hora
               </p>
             </div>
           </div>
@@ -216,18 +341,18 @@ export default function ConsumoPage() {
                 onClick={() => setCapInput(String(q))}
                 className="rounded-lg border border-slate-700 px-3 py-1 font-mono text-xs text-slate-300 hover:border-emerald-500"
               >
-                {formatAmount(q, 'ARS')}
+                {formatAmount(q, currency)}
               </button>
             ))}
             <button
-              onClick={() => setCapInput(String(Math.floor(balances.ARS)))}
+              onClick={() => setCapInput(String(Math.floor(balance)))}
               className="rounded-lg border border-indigo-600 px-3 py-1 font-mono text-xs text-indigo-300 hover:border-indigo-400"
             >
               Usar todo mi saldo
             </button>
           </div>
           <p className="text-xs text-slate-500">
-            Escribí cualquier monto: se reserva de tu saldo ({formatAmount(balances.ARS, 'ARS')}{' '}
+            Escribí cualquier monto: se reserva de tu saldo ({formatAmount(balance, currency)}{' '}
             disponibles) y lo que no uses se devuelve automáticamente al finalizar.
           </p>
           {!enoughBalance && capValid && (
@@ -236,19 +361,20 @@ export default function ConsumoPage() {
                 Tu saldo no alcanza para ese tope.
               </p>
               <button
-                onClick={() => setCapInput(String(Math.floor(balances.ARS)))}
+                onClick={() => setCapInput(String(Math.floor(balance)))}
                 className="shrink-0 rounded-lg bg-amber-500/20 px-2 py-1 text-xs font-medium text-amber-200 hover:bg-amber-500/30"
               >
-                Ajustar a {formatAmount(Math.floor(balances.ARS), 'ARS')}
+                Ajustar a {formatAmount(Math.floor(balance), currency)}
               </button>
             </div>
           )}
 
           <button
             onClick={handleStart}
-            disabled={!capValid || !enoughBalance}
-            className="sticky bottom-4 mt-4 w-full rounded-xl bg-emerald-600 py-3 font-medium text-white shadow-lg shadow-emerald-950/50 transition enabled:hover:bg-emerald-500 disabled:opacity-40"
+            disabled={!capValid || !enoughBalance || busy}
+            className="sticky bottom-4 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 font-medium text-white shadow-lg shadow-emerald-950/50 transition enabled:hover:bg-emerald-500 disabled:opacity-40"
           >
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
             Iniciar consumo
           </button>
         </div>
@@ -264,13 +390,14 @@ export default function ConsumoPage() {
             currency={session.currency}
           />
           <p className="text-center text-xs text-slate-500">
-            {session.merchantName} · {formatAmount(session.ratePerSecond * 60, 'ARS')}/min
+            {session.merchantName} · {formatAmount(session.ratePerSecond * 60, session.currency)}/min
           </p>
           <button
             onClick={handleFinish}
-            className="sticky bottom-4 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 font-medium text-white shadow-lg shadow-rose-950/50 transition hover:bg-rose-500"
+            disabled={busy}
+            className="sticky bottom-4 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 font-medium text-white shadow-lg shadow-rose-950/50 transition hover:bg-rose-500 disabled:opacity-40"
           >
-            <Square className="h-4 w-4 fill-current" />
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4 fill-current" />}
             Finalizar consumo
           </button>
         </div>
@@ -294,5 +421,19 @@ export default function ConsumoPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function ConsumoPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+        </main>
+      }
+    >
+      <ConsumoContent />
+    </Suspense>
   );
 }

@@ -1,4 +1,4 @@
-﻿# Work Journal
+# Work Journal
 
 BitÃ¡cora de trabajo para este perfil.
 
@@ -62,3 +62,11 @@ BitÃ¡cora de trabajo para este perfil.
 - **UI `/enviar`:** tabs Enviar/Recibir — flujo 3 pasos (alias con resolución en vivo debounce + escaneo QR `?to=<alias>` → monto + cartera ARS/USD + nota → `TransferReceipt` "Comprobante #ID"), `MyReceiveQR` con registro de alias inline, `TransferHistoryList` con dirección ±.
 - `QRScanner`: prop `parse` opcional (default sigue leyendo `?m=`). Accesos: tarjeta home + botón en `BalanceCard`.
 - Verificado: build limpio (ruta `/enviar` + 4 API routes nuevas); flujo API end-to-end (seed → alias → transfer → débito/crédito → historial → 4 errores); rutas 200.
+
+## 2026-10-12 — Agente 03 (Frontend UX) — Migración on-chain F0–F2 (feature-flag)
+- **F0 fundación:** ABIs exportados copiados a `src/lib/abis/`; `contracts.ts` (addresses por env + `chainReady`, `toUnits`/`fromUnits`, `CURRENCY_TYPE`, `getEmbeddedAddress`); `chainMode.ts` (`NEXT_PUBLIC_CHAIN_MODE=1`); providers con embedded wallet silenciosa (`showWalletUIs:false`); `POST /api/gas` faucet de MON (`GAS_FAUCET_PRIVATE_KEY`, cooldown por address).
+- **F1 rampa/balances:** `useContractTx` (send + ensureApproval), `useDualWallet` (balanceOf mARS/mUSDC + MON), `useGasFaucet`, `useExchangeRate` lee `arsPerUsd` de MockExchange con fallback mock, `BalanceContext` ramifica mock↔chain sin duplicar mutations, home con mint público + faucet silencioso.
+- **F2 TimeStream:** `useMonadStream` (merchantProfile, getSession, getUserSessions, merchantSessions, setRate, QR enable/disable, startStream con approve + parse `StreamStarted`, stopStream con parse `StreamSettled`). `/consumo` dual: `?m=` acepta address on-chain, resume sesión activa, poll de cierre por comercio, resumen paid/refunded real. `/comercio` dual: setRate on-chain, killswitch=deactivateQR/reactivateQR, QR con `/consumo?m=<address>` (nunca se renderiza la address), grilla + cierre de jornada desde getMerchantSessions. Nombre del comercio sigue off-chain (solo presentación).
+- Regla Web3-invisible respetada: nada de 0x/hash/gas en UI; errores genéricos "No se pudo procesar".
+- Verificado: `tsc --noEmit` limpio, `npm run build` verde (todas las rutas + `/api/gas`), smoke mock end-to-end (sesión create/close, merchant deactivate/regenerate). Chain mode queda inactivo hasta deploy — `chainReady=false` → mock intacto.
+- Backlog nuevo: `03_Frontend_Terminal/TASK_BACKLOG2.md` con F0–F2 ✅ y F3–F5 pendientes.
