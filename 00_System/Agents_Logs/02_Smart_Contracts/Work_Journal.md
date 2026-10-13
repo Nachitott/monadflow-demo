@@ -117,3 +117,29 @@ Módulo 2: `MilestoneEscrow.sol` (depósito 100%, etapa 0 intocable, deliver/app
 
 ### Próximo paso sugerido
 Fase 5: `script/Deploy.s.sol`, `script/export-abis.sh`, stress tests de carga (múltiples sesiones/proyectos concurrentes) y export de ABIs a `ABIs/`.
+
+---
+
+## 2026-10-13 (continuación 3) — Módulo 6 / Fase 5: Stress, Deploy script y ABIs ✅
+
+### Trabajo ejecutado
+- `script/Deploy.s.sol` — deploy de los 5 contratos con `PRIVATE_KEY`/`ARS_PER_USD` por env, listo para `--rpc-url monad_testnet --broadcast`. Deploy real pendiente de key fondeada.
+- `script/export-abis.sh` — exporta `forge inspect abi --json` a `ABIs/`; 5 JSON validados (MockUSDC 19, MockARS 19, MockExchange 20, TimeStream 42, MilestoneEscrow 49 entradas).
+- `test/Stress.t.sol` — 5 tests:
+  - `test_StressConcurrentStreams`: 40 sesiones simultáneas en 5 comercios con tarifas distintas, arranques escalonados, cierre mixto user/merchant — liquidación exacta por sesión, sin contaminación de estado, contrato drenado.
+  - `test_StressConcurrentProjects`: 12 proyectos en 4 caminos (completo, cancel, disputa 50/50, auto-release) — balances agregados exactos.
+  - 3 fuzz (256 runs): `min(dur·rate, cap)` universal, split de disputa exacto por bps, escrow nunca sobrepaga el depósito.
+- **Resultado: 77 tests totales, 100% pass.** Log: `test_logs/2026-10-13_modulo6_forge_test.log`.
+- `TASK_BACKLOG.md`: Módulo 6 completado → **todas las fases 0–5 cerradas**.
+
+### Estado DoD
+| Punto | Estado |
+|---|---|
+| Build limpio | ✅ sin warnings |
+| Tests 100% | ✅ 77/77 — stress + fuzz incluidos |
+| Confirmación <1s en Monad | ⏸️ pendiente deploy (sin PRIVATE_KEY fondeada) |
+| Gasless/paymaster | ⏸️ por diseño (capa ERC-4337) |
+| Logs | ✅ |
+
+### Estado general del dominio
+Los 5 contratos del spec v2.0 están implementados, testeados y con ABIs exportadas. El dominio queda listo para: (a) deploy a testnet cuando haya credenciales, (b) handoff de ABIs al Agente 03 (frontend).

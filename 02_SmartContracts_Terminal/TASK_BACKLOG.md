@@ -9,7 +9,7 @@
 - [x] Fase 2: Implementación de TimeStream.sol (Modo 1)
 - [x] Fase 3: Implementación de MilestoneEscrow.sol (Modo 2)
 - [x] Fase 4: Killswitch, Account Abstraction y hooks del Agente Orquestador
-- [ ] Fase 5: Pruebas de Carga en Foundry y Exportación de ABIs
+- [x] Fase 5: Pruebas de Carga en Foundry y Exportación de ABIs
 
 ---
 
@@ -122,9 +122,11 @@
 
 ---
 
-## 📌 Módulo 6: Testing & ABIs Output
+## 📌 Módulo 6: Testing & ABIs Output — ✅ Completado 2026-10-13
 - [x] `MockExchange.t.sol`: swaps en ambas direcciones, rate correcto, setRate solo owner. *(13 tests)*
 - [x] `TimeStream.t.sol`: escrow y refund, cap agotado con stop por tercero, killswitch, voucher válido/expirado/firmante inválido. *(25 tests)*
-- [x] `MilestoneEscrow.t.sol`: etapa 0 intocable (revert cancel pre-pago), ciclo deliver→approve, auto-release post-timer, dispute→resolve por agent, cancelación post-etapa-0. *(34 tests — 72 totales)*
-- [ ] Generar script de exportación automática de ABIs compiladas hacia `02_SmartContracts_Terminal/ABIs/`.
-- [ ] `script/Deploy.s.sol` + stress tests (Fase 5 restante).
+- [x] `MilestoneEscrow.t.sol`: etapa 0 intocable (revert cancel pre-pago), ciclo deliver→approve, auto-release post-timer, dispute→resolve por agent, cancelación post-etapa-0. *(34 tests)*
+- [x] `Stress.t.sol`: pruebas de carga — 40 sesiones concurrentes en 5 comercios (aislamiento de estado verificado), 12 proyectos en 4 caminos de vida, 3 fuzz (256 runs): settle=min(dur·rate,cap), split de disputa exacto, escrow nunca paga de más. *(5 tests)*
+- [x] `script/export-abis.sh`: exporta `forge inspect <c> abi --json` → `ABIs/{MockUSDC,MockARS,MockExchange,TimeStream,MilestoneEscrow}.json` (JSON validado).
+- [x] `script/Deploy.s.sol`: despliega los 5 contratos con `PRIVATE_KEY`/`ARS_PER_USD` por env; listo para `--rpc-url monad_testnet --broadcast`. **Deploy real pendiente de key fondeada (MON faucet).**
+- [x] **77 tests totales, 100% pass** — log: `test_logs/2026-10-13_modulo6_forge_test.log`.

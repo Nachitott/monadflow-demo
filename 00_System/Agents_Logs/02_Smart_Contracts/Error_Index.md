@@ -46,3 +46,8 @@ Registro de errores y soluciones.
 - **Causa raíz:** la clave correcta del project config es `exclude_lints` (verificado con `forge lint --help`); además existe supresión inline `// forge-lint: disable-next-line(<lint-id>)`.
 - **Solución aplicada:** `exclude_lints = ["block-timestamp"]` global (producto inherentemente basado en tiempo) + suppressions inline puntuales: `weak-prng` en derivación de IDs (son IDs, no RNG), `reentrancy-events` tras ecrecover (precompile no reentra), `require-revert-in-loop` en loop acotado. Fixes de código: `= 0` explícitos y `vm.getBlockTimestamp()` en warps de tests. `forge lint` final vacío.
 - **Nota menor:** se detectó y corrigió un soft-hyphen (U+00AD) en un comentario de `MilestoneEscrow.sol` — caracteres invisibles en comentarios pueden romper tooling.
+
+### E8 — `forge inspect <c> abi` en forge 1.8 imprime tabla, no JSON
+- **Mensaje:** `ABIs/*.json` quedaban con contenido de tabla ASCII (`Type | Signature | ...`) en vez de JSON — archivos inválidos para consumo por viem/wagmi.
+- **Causa raíz:** forge 1.8.4 pretty-printe la salida de `forge inspect` por defecto.
+- **Solución:** flag `--json` → `forge inspect <path>:<name> abi --json`. Validado con `require()` en Node: las 5 ABIs parsean como arrays JSON correctos.
