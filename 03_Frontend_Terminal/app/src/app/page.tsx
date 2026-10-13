@@ -13,6 +13,7 @@ import LoginScreen from '@/components/LoginScreen';
 import { useBalances } from '@/lib/BalanceContext';
 import { CHAIN_ENABLED } from '@/lib/chainMode';
 import { ABIS, chainReady, tokenOf, toUnits } from '@/lib/contracts';
+import { humanError } from '@/lib/friendlyError';
 import { useContractTx } from '@/lib/hooks/useContractTx';
 import { useDualWallet } from '@/lib/hooks/useDualWallet';
 import { useGasFaucet } from '@/lib/hooks/useGasFaucet';
@@ -27,6 +28,7 @@ export default function Home() {
   useGasFaucet();
   const [currency, setCurrency] = useState<Currency>('ARS');
   const [rampOpen, setRampOpen] = useState(false);
+  const [depositErr, setDepositErr] = useState<string | null>(null);
   const [activityKey, setActivityKey] = useState(0);
 
   if (!ready) {
@@ -57,8 +59,9 @@ export default function Home() {
         updateBalance(amount, depositCurrency, 'deposit');
         refreshBalances();
         setActivityKey((k) => k + 1);
-      } catch {
-        // Silent — the modal already showed the failure state.
+        setDepositErr(null);
+      } catch (e) {
+        setDepositErr(humanError(e));
       }
       return;
     }
@@ -77,6 +80,12 @@ export default function Home() {
           onCurrencyToggle={setCurrency}
           onTopUp={() => setRampOpen(true)}
         />
+
+        {depositErr && (
+          <p className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-center text-xs text-rose-300">
+            {depositErr}
+          </p>
+        )}
 
         <p className="text-right font-mono text-xs text-slate-500">
           1 USD ≈ {formatAmount(rate, 'ARS')}

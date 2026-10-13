@@ -30,6 +30,7 @@ import {
   useMilestoneEscrow,
 } from '@/lib/hooks/useMilestoneEscrow';
 import { reportActivity, reportEscrowStageEvents } from '@/lib/activityReport';
+import { humanError } from '@/lib/friendlyError';
 import { formatAmount } from '@/lib/useExchangeRate';
 
 export default function AgreementDetailPage() {
@@ -138,7 +139,7 @@ export default function AgreementDetailPage() {
     if (!enoughBalance || busy) return;
     if (onChain) {
       if (!a.contractorAddress) {
-        setError('No se pudo procesar la solicitud, intentá nuevamente');
+        setError(humanError('no_contract'));
         return;
       }
       setBusy(true);
@@ -160,8 +161,8 @@ export default function AgreementDetailPage() {
         });
         refreshBalances();
         await reload();
-      } catch {
-        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } catch (e) {
+        setError(humanError(e));
       } finally {
         setBusy(false);
       }
@@ -186,8 +187,8 @@ export default function AgreementDetailPage() {
         await escrow.approveStage(a.chainId as Hex, stageIndex);
         refreshBalances();
         await reload();
-      } catch {
-        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } catch (e) {
+        setError(humanError(e));
       } finally {
         setBusy(false);
       }
@@ -205,8 +206,8 @@ export default function AgreementDetailPage() {
     try {
       await escrow.claimAutoRelease(a.chainId as Hex);
       await reload();
-    } catch {
-      setError('No se pudo procesar la solicitud, intentá nuevamente');
+    } catch (e) {
+      setError(humanError(e));
     } finally {
       setBusy(false);
     }
@@ -232,8 +233,8 @@ export default function AgreementDetailPage() {
             dedupeKey: `escrowrefund:${a.chainId}`,
           });
         }
-      } catch {
-        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } catch (e) {
+        setError(humanError(e));
       } finally {
         setBusy(false);
       }

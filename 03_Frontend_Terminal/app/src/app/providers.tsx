@@ -7,6 +7,14 @@ import { useState } from 'react';
 import { wagmiConfig } from '@/lib/wagmi';
 import { BalanceProvider } from '@/lib/BalanceContext';
 import { monadTestnet } from '@/lib/chains';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+
+// Dev-only guardrail: prints once per module eval (SSR terminal + browser
+// console) so a silently-misconfigured env that falls back to mock mode is
+// impossible to miss during a demo. Never renders anything in the UI.
+if (process.env.NODE_ENV === 'development') {
+  console.info('[monadflow] mode:', CHAIN_ENABLED ? 'chain' : 'mock');
+}
 
 // Public client ID — safe to embed; env var overrides it if set.
 const PRIVY_APP_ID =
