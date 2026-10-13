@@ -83,7 +83,10 @@
   - [Hackathon Submission Checklist](Skills/hackathon_submission_checklist.md)
 - **Backlogs:**
   - [Smart Contracts Backlog](../02_SmartContracts_Terminal/TASK_BACKLOG.md)
-  - [Frontend Backlog](../03_Frontend_Terminal/TASK_BACKLOG.md)
+  - [Frontend Backlog](../03_Frontend_Terminal/TASK_BACKLOG.md) · [Frontend Backlog 2](../03_Frontend_Terminal/TASK_BACKLOG2.md) · [Frontend Backlog 3](../03_Frontend_Terminal/TASK_BACKLOG3.md)
+  - [SC Demo Backlog](../02_SmartContracts_Terminal/TASK_BACKLOG_DEMO.md)
+  - [QA E2E & Demo Backlog](../05_PostMortem_and_Networks/TASK_BACKLOG_QA_DEMO.md)
+  - [Pitch & Material Demo](../01_Architecture/TASK_BACKLOG_PITCH.md)
 - **Arquitectura futura:**
   - [Spec Agente Orquestador](../06_Agent_Orchestrator/SPEC_ORQUESTADOR.md)
 /

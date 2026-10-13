@@ -5,6 +5,7 @@ import { AtSign, CheckCircle2, Loader2, ScanLine, UserRound } from 'lucide-react
 import QRScanner from '@/components/stream/QRScanner';
 import { useBalances } from '@/lib/BalanceContext';
 import { useTransfers } from '@/lib/useTransfers';
+import { parseRecipient } from '@/lib/qrParse';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 import type { Transfer } from '@/lib/api';
 
@@ -15,19 +16,6 @@ interface Props {
 }
 
 const QUICK_AMOUNTS = [1000, 5000, 10000];
-
-const parseRecipient = (text: string): string | null => {
-  try {
-    const url = new URL(text);
-    const to = url.searchParams.get('to');
-    if (to) return to;
-    const m = url.pathname.match(/\/enviar/);
-    return m ? url.searchParams.get('to') : null;
-  } catch {
-    const raw = text.trim().toLowerCase();
-    return /^[a-z0-9][a-z0-9._-]{2,24}$/.test(raw) ? raw : null;
-  }
-};
 
 type Step = 'who' | 'howmuch';
 

@@ -1,6 +1,7 @@
 out/
 cache/
-broadcast/
 lib/
 .env
 .env.local
+# broadcast/ se commitea: receipts del deploy real = evidencia demo (F3)
+*.recovery.lock

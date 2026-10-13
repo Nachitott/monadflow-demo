@@ -25,6 +25,7 @@ import {
   type ChainSession,
 } from '@/lib/hooks/useMonadStream';
 import { reportActivity } from '@/lib/activityReport';
+import { humanError } from '@/lib/friendlyError';
 import {
   accruedAmount,
   closeSession,
@@ -78,6 +79,7 @@ function ConsumoContent() {
   const [finish, setFinish] = useState<{ paid: number; refunded: number; secs: number } | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const currency: Currency = onChain
     ? (chainMerchant?.currency ?? 'ARS')
@@ -199,6 +201,7 @@ function ConsumoContent() {
     if (onChain) {
       if (!chainMerchant) return;
       setBusy(true);
+      setStartError(null);
       try {
         const id = await stream.startStream(chainMerchant.address, cap, currency);
         const s = await stream.getSession(id);
@@ -206,9 +209,12 @@ function ConsumoContent() {
           setChainSession(s);
           setSession(toActive(s, merchantName));
           setStep('active');
+        } else {
+          setStartError(humanError('session_id_missing'));
         }
-      } catch {
-        setBlocked(true);
+      } catch (e) {
+        // A failed start is NOT an invalid code — show a retryable error.
+        setStartError(humanError(e));
       } finally {
         setBusy(false);
       }
@@ -384,6 +390,12 @@ function ConsumoContent() {
                 Ajustar a {formatAmount(Math.floor(balance), currency)}
               </button>
             </div>
+          )}
+
+          {startError && (
+            <p className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-center text-xs text-rose-300">
+              {startError}
+            </p>
           )}
 
           <button

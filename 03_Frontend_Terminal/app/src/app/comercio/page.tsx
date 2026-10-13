@@ -35,6 +35,7 @@ import {
   type ChainSession,
 } from '@/lib/hooks/useMonadStream';
 import { formatDuration } from '@/lib/useTimeStreamTimer';
+import { humanError } from '@/lib/friendlyError';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 /** On-chain session → StreamSession shape so the dashboard UI is shared. */
@@ -78,6 +79,7 @@ export default function ComercioPage() {
   const [editingRate, setEditingRate] = useState(false);
   const [rateInput, setRateInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const off = onChain
@@ -139,13 +141,21 @@ export default function ComercioPage() {
       setBusy(true);
       try {
         await stream.setQrEnabled(true);
+        setErrMsg(null);
+      } catch (e) {
+        setErrMsg(humanError(e));
       } finally {
         setBusy(false);
       }
       reload();
       return;
     }
-    setMerchant(await merchantAction({ action: 'regenerate' }));
+    try {
+      setMerchant(await merchantAction({ action: 'regenerate' }));
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
+    }
     reload();
   };
 
@@ -164,15 +174,23 @@ export default function ComercioPage() {
       setBusy(true);
       try {
         await stream.setRate(perHour / 3600, rateCurrency);
+        setErrMsg(null);
+      } catch (e) {
+        setErrMsg(humanError(e));
       } finally {
         setBusy(false);
       }
       reload();
       return;
     }
-    setMerchant(
-      await merchantAction({ action: 'update', ratePerMinute: perHour / 60 }),
-    );
+    try {
+      setMerchant(
+        await merchantAction({ action: 'update', ratePerMinute: perHour / 60 }),
+      );
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
+    }
   };
 
   const deactivate = async () => {
@@ -180,6 +198,9 @@ export default function ComercioPage() {
       setBusy(true);
       try {
         await stream.setQrEnabled(false);
+        setErrMsg(null);
+      } catch (e) {
+        setErrMsg(humanError(e));
       } finally {
         setBusy(false);
       }
@@ -187,7 +208,12 @@ export default function ComercioPage() {
       reload();
       return;
     }
-    setMerchant(await merchantAction({ action: 'deactivate' }));
+    try {
+      setMerchant(await merchantAction({ action: 'deactivate' }));
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
+    }
     setConfirmOff(false);
   };
 
@@ -306,6 +332,12 @@ export default function ComercioPage() {
         )}
       </div>
 
+      {errMsg && (
+        <p className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-center text-xs text-rose-300">
+          {errMsg}
+        </p>
+      )}
+
       {/* Refresh cadence + actions */}
       <div className="mt-4 flex items-center justify-between gap-2">
         <div className="flex rounded-lg border border-slate-800 p-0.5 text-xs">
@@ -363,14 +395,14 @@ export default function ComercioPage() {
           <div key={s.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div className="flex items-center justify-between">
               <p className="font-medium">{s.userName}</p>
-              <span className="flex items-center gap-1 font-mono text-xs text-emerald-400">
+              <span className="flex items-center gap-1 font-mono text-xs tabular-nums text-emerald-400">
                 <Clock className="h-3 w-3" />
                 {formatDuration((Date.now() - s.startTime) / 1000)}
               </span>
             </div>
             <div className="mt-2 flex items-center justify-between text-sm">
               <span className="text-slate-400">Acumulado</span>
-              <span className="font-mono text-emerald-300">
+              <span className="font-mono tabular-nums text-emerald-300">
                 {formatAmount(accruedAmount(s), s.currency)}
               </span>
             </div>

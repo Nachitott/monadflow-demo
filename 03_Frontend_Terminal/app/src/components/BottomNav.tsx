@@ -3,29 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Layers, QrCode, Timer } from 'lucide-react';
+import { Layers, QrCode, Send, Timer } from 'lucide-react';
 import QRScanner from '@/components/stream/QRScanner';
+import { universalParse } from '@/lib/qrParse';
 
 /**
  * Universal scan: every QR in the app encodes an internal link
  * (/consumo?m= merchant, /enviar?to= personal, /acuerdo/[id]). The parser
- * returns the destination path and the router just navigates there.
- * Raw fallbacks: 'qr-…' → merchant code, bare alias → P2P recipient.
+ * (src/lib/qrParse.ts) returns the destination path and the router just
+ * navigates there. Raw fallbacks: 'qr-…' → merchant code, bare alias → P2P.
  */
-const universalParse = (text: string): string | null => {
-  try {
-    const url = new URL(text, window.location.origin);
-    if (/^\/(consumo|enviar|acuerdo)/.test(url.pathname)) {
-      return url.pathname + url.search;
-    }
-    return null;
-  } catch {
-    const t = text.trim();
-    if (/^qr-[\w-]+$/.test(t)) return `/consumo?m=${encodeURIComponent(t)}`;
-    if (/^[a-z0-9._-]{3,25}$/.test(t)) return `/enviar?to=${encodeURIComponent(t)}`;
-    return null;
-  }
-};
 
 export default function BottomNav() {
   const router = useRouter();
@@ -41,6 +28,11 @@ export default function BottomNav() {
           <Link href="/consumo" className={itemClass}>
             <Timer className="h-5 w-5" />
             Por uso
+          </Link>
+
+          <Link href="/enviar" className={itemClass}>
+            <Send className="h-5 w-5" />
+            Enviar
           </Link>
 
           <div className="flex flex-1 justify-center">
@@ -63,7 +55,7 @@ export default function BottomNav() {
       {scanOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 p-4">
           <QRScanner
-            parse={universalParse}
+            parse={(text) => universalParse(text, window.location.origin)}
             onResult={(path) => {
               setScanOpen(false);
               router.push(path);

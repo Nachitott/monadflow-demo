@@ -33,6 +33,7 @@ import {
   useMilestoneEscrow,
 } from '@/lib/hooks/useMilestoneEscrow';
 import { reportEscrowStageEvents } from '@/lib/activityReport';
+import { humanError } from '@/lib/friendlyError';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 const STATUS_LABEL: Record<Agreement['status'], { text: string; cls: string }> = {
@@ -56,6 +57,7 @@ export default function AcuerdoPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [origin, setOrigin] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   // wizard state
   const [title, setTitle] = useState('');
@@ -129,28 +131,38 @@ export default function AcuerdoPage() {
 
   const submit = async () => {
     if (!valid) return;
-    await createAgreement({
-      title,
-      totalAmount: totalNum,
-      stageCount: stageNum,
-      autoApproveDays: Math.max(0, Number(days) || 0),
-      currency,
-      contractorId: user?.id ?? 'anon',
-      contractorName,
-      contractorAddress: onChain ? address : undefined,
-    });
-    setTitle('');
-    setTotal('');
-    setCreating(false);
+    try {
+      await createAgreement({
+        title,
+        totalAmount: totalNum,
+        stageCount: stageNum,
+        autoApproveDays: Math.max(0, Number(days) || 0),
+        currency,
+        contractorId: user?.id ?? 'anon',
+        contractorName,
+        contractorAddress: onChain ? address : undefined,
+      });
+      setTitle('');
+      setTotal('');
+      setCreating(false);
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
+    }
     reload();
   };
 
   const remove = async (a: Agreement) => {
-    await fetch(`/api/agreements/${a.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete' }),
-    });
+    try {
+      await fetch(`/api/agreements/${a.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete' }),
+      });
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
+    }
     reload();
   };
 
@@ -173,11 +185,19 @@ export default function AcuerdoPage() {
       setBusyId(a.id);
       try {
         await escrow.deliverStage(a.chainId as Hex, idx);
+        setErrMsg(null);
+      } catch (e) {
+        setErrMsg(humanError(e));
       } finally {
         setBusyId(null);
       }
     } else {
-      await agreementAction(a.id, { action: 'deliver', stageIndex: idx });
+      try {
+        await agreementAction(a.id, { action: 'deliver', stageIndex: idx });
+        setErrMsg(null);
+      } catch (e) {
+        setErrMsg(humanError(e));
+      }
     }
     reload();
   };
@@ -187,6 +207,9 @@ export default function AcuerdoPage() {
     setBusyId(a.id);
     try {
       await escrow.claimAutoRelease(a.chainId as Hex);
+      setErrMsg(null);
+    } catch (e) {
+      setErrMsg(humanError(e));
     } finally {
       setBusyId(null);
     }
@@ -244,7 +267,12 @@ export default function AcuerdoPage() {
                 </p>
                 <button
                   onClick={async () => {
-                    await agreementAction(a.id, { action: 'deactivate-link' });
+                    try {
+                      await agreementAction(a.id, { action: 'deactivate-link' });
+                      setErrMsg(null);
+                    } catch (e) {
+                      setErrMsg(humanError(e));
+                    }
                     reload();
                   }}
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-700/60 py-2 text-xs font-medium text-rose-400 hover:bg-rose-950/40"
@@ -255,7 +283,12 @@ export default function AcuerdoPage() {
             ) : (
               <button
                 onClick={async () => {
-                  await agreementAction(a.id, { action: 'reactivate-link' });
+                  try {
+                    await agreementAction(a.id, { action: 'reactivate-link' });
+                    setErrMsg(null);
+                  } catch (e) {
+                    setErrMsg(humanError(e));
+                  }
                   reload();
                 }}
                 className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-700/60 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-950/40"
@@ -298,7 +331,12 @@ export default function AcuerdoPage() {
           next.authorizedAt ? (
             <button
               onClick={async () => {
-                await agreementAction(a.id, { action: 'deliver', stageIndex: nextIdx });
+                try {
+                  await agreementAction(a.id, { action: 'deliver', stageIndex: nextIdx });
+                  setErrMsg(null);
+                } catch (e) {
+                  setErrMsg(humanError(e));
+                }
                 reload();
               }}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2.5 text-xs font-medium text-white hover:bg-sky-500"
@@ -461,6 +499,12 @@ export default function AcuerdoPage() {
             Crear acuerdo
           </button>
         </div>
+      )}
+
+      {errMsg && (
+        <p className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-center text-xs text-rose-300">
+          {errMsg}
+        </p>
       )}
 
       {/* Ongoing agreements */}

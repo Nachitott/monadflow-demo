@@ -32,14 +32,14 @@ export default function LiveStreamTimer({
         {formatDuration(elapsedSeconds)}
       </p>
 
-      <p className="mt-2 text-center font-mono text-2xl text-emerald-300">
+      <p className="mt-2 text-center font-mono text-2xl tabular-nums text-emerald-300">
         {formatAmount(accrued, currency)}
       </p>
 
       <div className="mt-4">
         <div className="flex justify-between text-xs text-slate-400">
           <span>Tope máximo</span>
-          <span className={capReached ? 'font-semibold text-amber-400' : ''}>
+          <span className={`font-mono tabular-nums ${capReached ? 'font-semibold text-amber-400' : ''}`}>
             {formatAmount(maxCap, currency)}
             {capReached && ' · alcanzado'}
           </span>

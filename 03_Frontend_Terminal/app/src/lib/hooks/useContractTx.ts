@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { usePublicClient, useWriteContract } from 'wagmi';
 import { erc20Abi, type Abi, type Address } from 'viem';
 import { tokenOf } from '../contracts';
+import { errorCode } from '../friendlyError';
 import type { Currency } from '../useExchangeRate';
 
 interface TxConfig {
@@ -25,10 +26,17 @@ export function useContractTx() {
   const send = useCallback(
     async (config: TxConfig) => {
       if (!client) throw new Error('no_client');
-      const hash = await writeContractAsync(config as never);
-      const receipt = await client.waitForTransactionReceipt({ hash });
-      if (receipt.status === 'reverted') throw new Error('reverted');
-      return { hash, receipt };
+      try {
+        const hash = await writeContractAsync(config as never);
+        const receipt = await client.waitForTransactionReceipt({ hash });
+        if (receipt.status === 'reverted') throw new Error('reverted');
+        return { hash, receipt };
+      } catch (e) {
+        // Web3-invisible: never propagate raw wagmi/viem text (revert
+        // reasons, hex blobs, network names) — only a stable code that
+        // callers map to es-AR copy via friendlyError.humanError().
+        throw new Error(errorCode(e));
+      }
     },
     [client, writeContractAsync],
   );

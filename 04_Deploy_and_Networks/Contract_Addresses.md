@@ -8,11 +8,17 @@ Este documento registra las direcciones de los contratos inteligentes desplegado
 
 | Contrato | Dirección en Monad Testnet | Estado | Verificado |
 | :--- | :--- | :---: | :---: |
-| `MockUSDC.sol` (Op-test) | [`0x27BE5512a477045EF270EE16c804776D6269663C`](https://testnet.monadexplorer.com/address/0x27BE5512a477045EF270EE16c804776D6269663C) | ✅ Deployed | ❌ No |
-| `MockARS.sol` (Op-test) | [`0x1569b7c9115DF4AFeE1C71689D8E390bceea4958`](https://testnet.monadexplorer.com/address/0x1569b7c9115DF4AFeE1C71689D8E390bceea4958) | ✅ Deployed | ❌ No |
-| `MockExchange.sol` (ARS↔USD) | [`0x1C87797a412519BbB4AB62e29E24D2530E200026`](https://testnet.monadexplorer.com/address/0x1C87797a412519BbB4AB62e29E24D2530E200026) | ✅ Deployed | ❌ No |
-| `TimeStream.sol` | [`0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8`](https://testnet.monadexplorer.com/address/0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8) | ✅ Deployed | ❌ No |
-| `MilestoneEscrow.sol` | [`0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817`](https://testnet.monadexplorer.com/address/0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817) | ✅ Deployed | ❌ No |
+| `MockUSDC.sol` (Op-test) | [`0x27BE5512a477045EF270EE16c804776D6269663C`](https://testnet.monadexplorer.com/address/0x27BE5512a477045EF270EE16c804776D6269663C) | ✅ Deployed | ✅ Sí |
+| `MockARS.sol` (Op-test) | [`0x1569b7c9115DF4AFeE1C71689D8E390bceea4958`](https://testnet.monadexplorer.com/address/0x1569b7c9115DF4AFeE1C71689D8E390bceea4958) | ✅ Deployed | ✅ Sí |
+| `MockExchange.sol` (ARS↔USD) | [`0x1C87797a412519BbB4AB62e29E24D2530E200026`](https://testnet.monadexplorer.com/address/0x1C87797a412519BbB4AB62e29E24D2530E200026) | ✅ Deployed | ✅ Sí |
+| `TimeStream.sol` | [`0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8`](https://testnet.monadexplorer.com/address/0xE3209E6b0CC93BCBc05067956ACd1Cf1ec8118C8) | ✅ Deployed | ✅ Sí |
+| `MilestoneEscrow.sol` | [`0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817`](https://testnet.monadexplorer.com/address/0xA8f6Fc4a96AD87B4ac4f93cE6F05F9e208d6d817) | ✅ Deployed | ✅ Sí |
+
+> **Verificación (2026-10-13):** los 5 contratos quedaron verificados con `exact_match`
+> vía `forge verify-contract --verifier sourcify` sobre el servicio Sourcify de
+> BlockVision (`sourcify-api-monad.blockvision.org`), que es el backend de
+> MonadVision / MonadExplorer. El código fuente y el ABI quedan legibles en la
+> pestaña *Contract* de cada address en el explorer.
 
 ---
 

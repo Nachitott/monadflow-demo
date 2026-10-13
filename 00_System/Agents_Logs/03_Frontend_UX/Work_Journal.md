@@ -100,3 +100,12 @@ BitÃ¡cora de trabajo para este perfil.
 - **Auditoría Web3-invisible:** grep de `gas|wallet|billetera|hash|0x|USDC|token|smart contract|escrow|blockchain|metamask|wei` en `src/` → cero términos en copy visible (solo identificadores internos/ABIs).
 - **Docs:** `Contract_Addresses.md` con tabla real + links al explorer; `TASK_BACKLOG2.md` sección Final ✅; `TASK_BACKLOG.md` Fase 6 ✅; archivo `nul` de la raíz eliminado.
 - **Pendiente (manual):** smoke UI con login Privy en chain mode (no automatizable sin Google/email); verificación de contratos en explorer (no hay verifier configurado).
+
+## 2026-10-13 — Agente 03 (Frontend UX) — TASK_BACKLOG3 completado (hardening final)
+- **F1 (bug crítico):** `chainMode.ts` leía `NEXT_PUBLIC_CHAIN_ENABLED` pero toda la doc/env usa `NEXT_PUBLIC_CHAIN_MODE` → la app corría en mock pese a tener `=1` configurado. Unificado al nombre documentado. Guardrail dev-only en `providers.tsx`: `console.info('[monadflow] mode: chain|mock')` — nada visible en UI.
+- **F2 (sanitización de errores):** nuevo `src/lib/friendlyError.ts` (`errorCode`/`humanError`) — mapea rechazos de firma a "Cancelaste la operación." y todo lo técnico (reverts, viem/wagmi, hex) al genérico "No se pudo procesar la solicitud, intentá nuevamente". `useContractTx` sanitiza en el hook; banners de error agregados en `/comercio`, `/acuerdo`, `/consumo`, home (mint ya no falla en silencio) y `/acuerdo/[id]`. `/comercio` y `/acuerdo` tenían `try/finally` sin `catch` → rejections mudas.
+- **F3 (pulido mobile):** `/enviar` agregado a `BottomNav`; `tabular-nums` en `LiveStreamTimer` (acumulado), contadores vivos de `/comercio` (ActivityList ya lo tenía).
+- **Parsers QR testeables:** extraídos a `src/lib/qrParse.ts` (`universalParse` + `parseRecipient`); `SendMoneyForm` consume el lib. El refactor + tests descubrieron un bug real: los fallbacks de qrId/alias crudos eran código muerto (`new URL` con base resolvía strings crudos como paths relativos sin tirar) — corregido aceptando solo rutas conocidas antes de caer al fallback.
+- **Vitest:** `vitest@2.1.9` dev-dep + script `npm test` (`vitest run`). 23 tests unitarios: `friendlyError`, `contracts` (CURRENCY_TYPE/toUnits/fromUnits), `formatAmount` (es-AR), `qrParse`.
+- **Verificado:** `tsc --noEmit` limpio, `npm test` 23/23 verde, `npm run build` verde (todas las rutas), `npm run dev` en chain mode con `/`, `/enviar`, `/consumo`, `/comercio` → 200.
+- **Pendiente (manual):** QRScanner en dispositivo real (permiso de cámara) y checklist visual del Agente 05.
