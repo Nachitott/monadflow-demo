@@ -11,12 +11,20 @@ import FiatRampModal from '@/components/FiatRampModal';
 import HeaderUserBar from '@/components/HeaderUserBar';
 import LoginScreen from '@/components/LoginScreen';
 import { useBalances } from '@/lib/BalanceContext';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+import { ABIS, chainReady, tokenOf, toUnits } from '@/lib/contracts';
+import { useContractTx } from '@/lib/hooks/useContractTx';
+import { useDualWallet } from '@/lib/hooks/useDualWallet';
+import { useGasFaucet } from '@/lib/hooks/useGasFaucet';
 import { useExchangeRate, formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 export default function Home() {
   const { ready, authenticated } = usePrivy();
   const { rate, updatedAt } = useExchangeRate();
-  const { balances, updateBalance } = useBalances();
+  const { balances, updateBalance, refreshBalances } = useBalances();
+  const { send } = useContractTx();
+  const { address } = useDualWallet();
+  useGasFaucet();
   const [currency, setCurrency] = useState<Currency>('ARS');
   const [rampOpen, setRampOpen] = useState(false);
   const [activityKey, setActivityKey] = useState(0);
@@ -33,7 +41,27 @@ export default function Home() {
     return <LoginScreen />;
   }
 
-  const handleDeposit = (amount: number, depositCurrency: Currency) => {
+  const handleDeposit = async (amount: number, depositCurrency: Currency) => {
+    if (CHAIN_ENABLED && chainReady && address) {
+      // Mock tokens mint publicly (demo faucet) — "cargar saldo" credits
+      // the user's embedded wallet directly on-chain.
+      try {
+        await send({
+          address: tokenOf(depositCurrency)!,
+          abi: depositCurrency === 'USD' ? ABIS.mockUsdc : ABIS.mockArs,
+          functionName: 'mint',
+          args: [address, toUnits(amount, depositCurrency)],
+        });
+        // Keep the KV copy + activity log in sync — it feeds the history
+        // feed and the mock fallback if the flag flips back.
+        updateBalance(amount, depositCurrency, 'deposit');
+        refreshBalances();
+        setActivityKey((k) => k + 1);
+      } catch {
+        // Silent — the modal already showed the failure state.
+      }
+      return;
+    }
     updateBalance(amount, depositCurrency, 'deposit');
     setActivityKey((k) => k + 1);
   };

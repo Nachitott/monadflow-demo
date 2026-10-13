@@ -4,6 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { usePrivy } from '@privy-io/react-auth';
 import type { Currency } from './useExchangeRate';
 import { fetchBalances, postBalanceDelta, seedBalances } from './api';
+import { CHAIN_ENABLED } from './chainMode';
+import { chainReady } from './contracts';
+import { useDualWallet } from './hooks/useDualWallet';
 
 export type Balances = Record<Currency, number>;
 
@@ -44,6 +47,9 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
   const userId = user?.id;
   const [balances, setBalances] = useState<Balances>(ZERO);
   const loadedFor = useRef<string | null>(null);
+  // On-chain dual wallet — reads stay disabled in mock mode.
+  const chainWallet = useDualWallet();
+  const onChain = CHAIN_ENABLED && chainReady;
 
   // Server is authoritative; localStorage is the instant-paint cache.
   const syncFromServer = useCallback(async (uid: string, local: Balances) => {
@@ -77,6 +83,10 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
   }, [userId, syncFromServer]);
 
   const refreshBalances = useCallback(() => {
+    if (onChain) {
+      chainWallet.refresh();
+      return;
+    }
     if (!userId) return;
     fetchBalances(userId)
       .then((server) => {
@@ -86,7 +96,7 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {});
-  }, [userId]);
+  }, [userId, onChain, chainWallet]);
 
   // Pick up incoming transfers / changes from other devices on focus.
   useEffect(() => {
@@ -108,8 +118,14 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
     [userId],
   );
 
+  const effectiveBalances: Balances = onChain
+    ? { ARS: chainWallet.balanceARS, USD: chainWallet.balanceUSD }
+    : balances;
+
   return (
-    <BalanceContext.Provider value={{ balances, updateBalance, refreshBalances }}>
+    <BalanceContext.Provider
+      value={{ balances: effectiveBalances, updateBalance, refreshBalances }}
+    >
       {children}
     </BalanceContext.Provider>
   );

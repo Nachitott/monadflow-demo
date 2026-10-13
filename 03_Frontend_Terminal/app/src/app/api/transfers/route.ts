@@ -45,14 +45,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'self_transfer' }, { status: 400 });
   }
 
-  const sender = (await getBalances(fromUserId)) ?? { ARS: 0, USD: 0 };
-  if (sender[currency] < amount) {
-    return NextResponse.json({ error: 'insufficient_funds' }, { status: 402 });
+  // chain:true → funds already moved on-chain; we only file the receipt
+  // (txRef stored, never rendered) without touching mock balances.
+  const isChain = body.chain === true;
+  if (!isChain) {
+    const sender = (await getBalances(fromUserId)) ?? { ARS: 0, USD: 0 };
+    if (sender[currency] < amount) {
+      return NextResponse.json({ error: 'insufficient_funds' }, { status: 402 });
+    }
+    // Debit sender + credit recipient in the shared store, then record.
+    await applyBalanceDelta(fromUserId, -amount, currency);
+    await applyBalanceDelta(recipient.userId, amount, currency);
   }
-
-  // Debit sender + credit recipient in the shared store, then record.
-  await applyBalanceDelta(fromUserId, -amount, currency);
-  await applyBalanceDelta(recipient.userId, amount, currency);
 
   const transfer: TransferRecord = {
     id: makeTransferId(),
@@ -63,6 +67,7 @@ export async function POST(req: NextRequest) {
     amount,
     currency,
     note,
+    txRef: isChain && typeof body.txRef === 'string' ? body.txRef.slice(0, 80) : undefined,
     status: 'completed',
     createdAt: Date.now(),
   };

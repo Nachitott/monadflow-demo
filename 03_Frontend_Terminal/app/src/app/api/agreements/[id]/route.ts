@@ -75,6 +75,23 @@ export async function POST(
       a.status = 'active';
       break;
     }
+    case 'link-chain': {
+      // Chain-mode deposit: the client already ran createProject on-chain
+      // (which escrows the 100% atomically) — we just link the projectId
+      // so both parties resolve this draft to on-chain state.
+      if (a.status !== 'pending')
+        return NextResponse.json({ error: 'already_deposited' }, { status: 409 });
+      if (!a.linkActive)
+        return NextResponse.json({ error: 'link_inactive' }, { status: 409 });
+      if (typeof body.chainId !== 'string' || !body.chainId.startsWith('0x'))
+        return NextResponse.json({ error: 'invalid_chain_id' }, { status: 400 });
+      a.chainId = body.chainId.slice(0, 80);
+      a.clientId = String(body.clientId ?? 'anon').slice(0, 80);
+      a.clientName = String(body.clientName ?? 'Cliente').slice(0, 40);
+      a.stages[0].authorizedAt = Date.now();
+      a.status = 'active';
+      break;
+    }
     case 'authorize-next': {
       // Client green light to work on the next stage — its payment is
       // committed until that stage is resolved.

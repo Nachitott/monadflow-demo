@@ -16,6 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 import MerchantKillswitchModal from '@/components/stream/MerchantKillswitchModal';
 import {
   accruedAmount,
@@ -26,8 +27,31 @@ import {
   type StreamSession,
 } from '@/lib/api';
 import { qrLink } from '@/lib/merchant';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+import { chainReady, getEmbeddedAddress } from '@/lib/contracts';
+import {
+  useMonadStream,
+  type ChainMerchant,
+  type ChainSession,
+} from '@/lib/hooks/useMonadStream';
 import { formatDuration } from '@/lib/useTimeStreamTimer';
-import { formatAmount } from '@/lib/useExchangeRate';
+import { formatAmount, type Currency } from '@/lib/useExchangeRate';
+
+/** On-chain session → StreamSession shape so the dashboard UI is shared. */
+const chainToSession = (s: ChainSession, merchantName: string): StreamSession => ({
+  id: s.id,
+  merchantQrId: '',
+  merchantName,
+  userId: s.user,
+  userName: 'Cliente',
+  startTime: s.startTime,
+  ratePerSecond: s.ratePerSecond,
+  currency: s.currency,
+  maxCap: s.maxCap,
+  ended: !s.active,
+  endTime: s.stopTime || undefined,
+  totalPaid: s.active ? undefined : s.totalPaid,
+});
 
 const REFRESH_OPTIONS = [
   { label: '1 min', ms: 60_000 },
@@ -37,9 +61,14 @@ const REFRESH_OPTIONS = [
 ] as const;
 
 export default function ComercioPage() {
+  const { user } = usePrivy();
+  const stream = useMonadStream();
+  const onChain = CHAIN_ENABLED && chainReady;
+  const address = getEmbeddedAddress(user);
   const [sessions, setSessions] = useState<StreamSession[]>([]);
   const [allSessions, setAllSessions] = useState<StreamSession[]>([]);
   const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [chainProfile, setChainProfile] = useState<ChainMerchant | null>(null);
   const [confirmOff, setConfirmOff] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [refreshMs, setRefreshMs] = useState<number>(60_000);
@@ -48,11 +77,38 @@ export default function ComercioPage() {
   const [nameInput, setNameInput] = useState('');
   const [editingRate, setEditingRate] = useState(false);
   const [rateInput, setRateInput] = useState('');
+  const [busy, setBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const off = merchant ? !merchant.active : false;
+  const off = onChain
+    ? (chainProfile?.disabled ?? false)
+    : merchant
+      ? !merchant.active
+      : false;
+
+  // Currency the merchant charges in (mock is always ARS).
+  const rateCurrency: Currency = onChain
+    ? (chainProfile?.currency ?? 'ARS')
+    : 'ARS';
 
   const reload = useCallback(async () => {
+    if (onChain && address) {
+      // Name still comes from the shared mock record (presentational
+      // only — the contract has no name field); everything else is chain.
+      const [m, profile, all] = await Promise.all([
+        fetchMerchant(),
+        stream.merchantProfile(address),
+        stream.merchantSessions(address),
+      ]);
+      setMerchant(m);
+      setChainProfile(profile);
+      const name = m.name;
+      const mapped = all.map((s) => chainToSession(s, name));
+      setSessions(mapped.filter((s) => !s.ended));
+      setAllSessions(mapped);
+      setOrigin(window.location.origin);
+      return;
+    }
     const [m, actives, all] = await Promise.all([
       fetchMerchant(),
       fetchSessions(true),
@@ -62,7 +118,7 @@ export default function ComercioPage() {
     setSessions(actives);
     setAllSessions(all);
     setOrigin(window.location.origin);
-  }, []);
+  }, [onChain, address, stream]);
 
   useEffect(() => {
     reload();
@@ -79,6 +135,16 @@ export default function ComercioPage() {
   }, [refreshMs, reload]);
 
   const handleNewQr = async () => {
+    if (onChain) {
+      setBusy(true);
+      try {
+        await stream.setQrEnabled(true);
+      } finally {
+        setBusy(false);
+      }
+      reload();
+      return;
+    }
     setMerchant(await merchantAction({ action: 'regenerate' }));
     reload();
   };
@@ -93,11 +159,36 @@ export default function ComercioPage() {
   const saveRate = async () => {
     setEditingRate(false);
     const perHour = Number(rateInput.replace(',', '.'));
-    if (perHour > 0) {
-      setMerchant(
-        await merchantAction({ action: 'update', ratePerMinute: perHour / 60 }),
-      );
+    if (perHour <= 0) return;
+    if (onChain) {
+      setBusy(true);
+      try {
+        await stream.setRate(perHour / 3600, rateCurrency);
+      } finally {
+        setBusy(false);
+      }
+      reload();
+      return;
     }
+    setMerchant(
+      await merchantAction({ action: 'update', ratePerMinute: perHour / 60 }),
+    );
+  };
+
+  const deactivate = async () => {
+    if (onChain) {
+      setBusy(true);
+      try {
+        await stream.setQrEnabled(false);
+      } finally {
+        setBusy(false);
+      }
+      setConfirmOff(false);
+      reload();
+      return;
+    }
+    setMerchant(await merchantAction({ action: 'deactivate' }));
+    setConfirmOff(false);
   };
 
   const today = new Date().toDateString();
@@ -181,12 +272,25 @@ export default function ComercioPage() {
           ) : (
             <button
               onClick={() => {
-                setRateInput(String(Math.round((merchant?.ratePerMinute ?? 0) * 60)));
+                setRateInput(
+                  String(
+                    Math.round(
+                      onChain
+                        ? (chainProfile?.ratePerSecond ?? 0) * 3600
+                        : (merchant?.ratePerMinute ?? 0) * 60,
+                    ),
+                  ),
+                );
                 setEditingRate(true);
               }}
               className="group flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200"
             >
-              Panel del establecimiento · {merchant && formatAmount(merchant.ratePerMinute * 60, 'ARS')}/hora
+              Panel del establecimiento ·{' '}
+              {onChain
+                ? chainProfile &&
+                  formatAmount(chainProfile.ratePerSecond * 3600, rateCurrency)
+                : merchant && formatAmount(merchant.ratePerMinute * 60, 'ARS')}
+              /hora
               <Pencil className="h-3 w-3 text-slate-500 group-hover:text-slate-300" />
             </button>
           )}
@@ -235,12 +339,13 @@ export default function ComercioPage() {
           </button>
           <button
             onClick={() => (off ? handleNewQr() : setConfirmOff(true))}
+            disabled={busy}
             aria-label={off ? 'Generar nuevo QR' : 'Killswitch'}
             className={`rounded-lg p-2 transition ${
               off
                 ? 'border border-emerald-600 text-emerald-400 hover:bg-emerald-950'
                 : 'bg-rose-600 text-white hover:bg-rose-500'
-            }`}
+            } disabled:opacity-40`}
           >
             <Power className="h-4 w-4" />
           </button>
@@ -290,17 +395,23 @@ export default function ComercioPage() {
       </div>
 
       {/* Merchant QR card */}
-      {merchant && (
+      {merchant && (!onChain || chainProfile) && (
         <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <div className="flex items-center justify-between">
             <p className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
               <QrCode className="h-4 w-4" /> Mi código de ingreso
             </p>
-            <span className="font-mono text-[10px] text-slate-500">{merchant.qrId}</span>
+            {!onChain && (
+              <span className="font-mono text-[10px] text-slate-500">{merchant.qrId}</span>
+            )}
           </div>
           <div className="relative mx-auto mt-3 w-fit rounded-xl bg-white p-3">
             <QRCodeSVG
-              value={qrLink(merchant, origin || '')}
+              value={
+                onChain
+                  ? `${origin}/consumo?m=${address ?? ''}`
+                  : qrLink(merchant, origin || '')
+              }
               size={200}
               level="M"
             />
@@ -314,9 +425,10 @@ export default function ComercioPage() {
           {off ? (
             <button
               onClick={handleNewQr}
-              className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-500"
+              disabled={busy}
+              className="mt-3 w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
             >
-              Generar código nuevo
+              {onChain ? 'Reactivar código' : 'Generar código nuevo'}
             </button>
           ) : (
             <p className="mt-3 text-center text-xs text-slate-500">
@@ -330,10 +442,7 @@ export default function ComercioPage() {
         merchantName={merchant?.name ?? 'el comercio'}
         isOpen={confirmOff}
         onClose={() => setConfirmOff(false)}
-        onConfirmDeactivation={async () => {
-          setMerchant(await merchantAction({ action: 'deactivate' }));
-          setConfirmOff(false);
-        }}
+        onConfirmDeactivation={deactivate}
       />
 
       {/* Daily close report */}
@@ -353,7 +462,7 @@ export default function ComercioPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-slate-400">Recaudación total</dt>
-                <dd className="font-mono text-emerald-300">{formatAmount(totalRevenue, 'ARS')}</dd>
+                <dd className="font-mono text-emerald-300">{formatAmount(totalRevenue, rateCurrency)}</dd>
               </div>
             </dl>
             <button

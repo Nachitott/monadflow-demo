@@ -1,4 +1,4 @@
-﻿# Work Journal
+# Work Journal
 
 BitÃ¡cora de trabajo para este perfil.
 
@@ -62,3 +62,41 @@ BitÃ¡cora de trabajo para este perfil.
 - **UI `/enviar`:** tabs Enviar/Recibir — flujo 3 pasos (alias con resolución en vivo debounce + escaneo QR `?to=<alias>` → monto + cartera ARS/USD + nota → `TransferReceipt` "Comprobante #ID"), `MyReceiveQR` con registro de alias inline, `TransferHistoryList` con dirección ±.
 - `QRScanner`: prop `parse` opcional (default sigue leyendo `?m=`). Accesos: tarjeta home + botón en `BalanceCard`.
 - Verificado: build limpio (ruta `/enviar` + 4 API routes nuevas); flujo API end-to-end (seed → alias → transfer → débito/crédito → historial → 4 errores); rutas 200.
+
+## 2026-10-12 — Agente 03 (Frontend UX) — Migración on-chain F0–F2 (feature-flag)
+- **F0 fundación:** ABIs exportados copiados a `src/lib/abis/`; `contracts.ts` (addresses por env + `chainReady`, `toUnits`/`fromUnits`, `CURRENCY_TYPE`, `getEmbeddedAddress`); `chainMode.ts` (`NEXT_PUBLIC_CHAIN_MODE=1`); providers con embedded wallet silenciosa (`showWalletUIs:false`); `POST /api/gas` faucet de MON (`GAS_FAUCET_PRIVATE_KEY`, cooldown por address).
+- **F1 rampa/balances:** `useContractTx` (send + ensureApproval), `useDualWallet` (balanceOf mARS/mUSDC + MON), `useGasFaucet`, `useExchangeRate` lee `arsPerUsd` de MockExchange con fallback mock, `BalanceContext` ramifica mock↔chain sin duplicar mutations, home con mint público + faucet silencioso.
+- **F2 TimeStream:** `useMonadStream` (merchantProfile, getSession, getUserSessions, merchantSessions, setRate, QR enable/disable, startStream con approve + parse `StreamStarted`, stopStream con parse `StreamSettled`). `/consumo` dual: `?m=` acepta address on-chain, resume sesión activa, poll de cierre por comercio, resumen paid/refunded real. `/comercio` dual: setRate on-chain, killswitch=deactivateQR/reactivateQR, QR con `/consumo?m=<address>` (nunca se renderiza la address), grilla + cierre de jornada desde getMerchantSessions. Nombre del comercio sigue off-chain (solo presentación).
+- Regla Web3-invisible respetada: nada de 0x/hash/gas en UI; errores genéricos "No se pudo procesar".
+- Verificado: `tsc --noEmit` limpio, `npm run build` verde (todas las rutas + `/api/gas`), smoke mock end-to-end (sesión create/close, merchant deactivate/regenerate). Chain mode queda inactivo hasta deploy — `chainReady=false` → mock intacto.
+- Backlog nuevo: `03_Frontend_Terminal/TASK_BACKLOG2.md` con F0–F2 ✅ y F3–F5 pendientes.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F3: MilestoneEscrow híbrido
+- `useMilestoneEscrow`: createProject (approve + escrow atómico del 100%, parse ProjectCreated), deliverStage/approveStage/cancelProject/claimAutoRelease, getProjectView (display units), mergeChainAgreement (mock record ↔ estado on-chain → shape Agreement).
+- Store: `AgreementState.contractorAddress` + `chainId`. API: `POST /api/agreements` toma contractorAddress; acción `link-chain` (0x-format, 409 duplicado) vincula el projectId tras el depósito on-chain.
+- `/acuerdo`: draft off-chain siempre (índice/QR); registros con chainId leen del contrato cada poll; entregar → deliverStage(currentStage); "Cobrar etapa — plazo vencido" → claimAutoRelease.
+- `/acuerdo/[id]`: depositar → ensureApproval + createProject → link-chain; approve/cancel on-chain con refreshBalances (sin updateBalance al mock en chain mode); "Liberar por vencimiento" cuando vence el timer; errores con copy genérico es-AR.
+- Semántica contract≠mock documentada en TASK_BACKLOG2 (depósito atómico, sin luz verde, cancel con reembolso de entregadas-no-aprobadas, disputas off — agent=0x0).
+- Verificado: tsc + build verdes; smoke API: link-chain 400/200/409, ciclo mock completo sin regresión, rutas 200.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F4: P2P por alias con ERC-20
+- `AliasRecord.walletAddress` + POST /api/aliases lo persiste (regex ^0x[0-9a-fA-F]{40}$; re-registro inválido conserva la guardada). GET ?alias= la expone al sender (nunca en UI). Sanación silenciosa: `useTransfers.refresh` re-registra el alias propio si falta address en chain mode.
+- `POST /api/transfers` con `chain:true` + `txRef`: archiva comprobante `tr-…` sin tocar balances mock (fondos ya movidos on-chain). Mantiene 404 alias_not_found / 400 self_transfer.
+- `useTransfers.send` dual: chain → resolveAlias → `transfer` ERC-20 (erc20Abi) a walletAddress → sendTransfer(chain:true, txRef). `useGasFaucet` dentro del seam. Errores nuevos: recipient_not_ready (alias sin address) → "Ese usuario todavía no puede recibir pagos."
+- Verificado: tsc + build verdes; smoke: registro con address, conservación en re-registro, chain:true sin mutar balances, errores, historial con ambos modos.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F5: actividad unificada chain + cierre docs
+- `POST /api/activity`: registra eventos chain con `dedupeKey` idempotente por (userId, key) + `label`/`refId`/`at`. `ActivityRecord` extendido (kind completo + campos opcionales); GET mapea kind→direction/label/refId.
+- `lib/activityReport.ts`: `reportActivity` (guard `mf:actrep` en localStorage + dedupe server como backstop) y `reportEscrowStageEvents` (sync-on-read: cliente→escrow_release, contratista→escrow_payment por etapa paga).
+- Integraciones: `/consumo` postea `consumo` al cerrar stream on-chain (dedupe `stream:{id}`); `/acuerdo` mergeChain y `/acuerdo/[id]` reload reportan etapas pagas; `escrow_refund` explícito al cancelar; transfers chain ya derivan vía `chain:true`; mint ya loguea `deposit` vía balances reason.
+- Docs: puntero TASK_BACKLOG→TASK_BACKLOG2; Monad_Testnet_Config §D vars chain-mode; Contract_Addresses nota "chain-ready" (deploy pendiente); .env.example ya completo desde F0.
+- Verificado: tsc + build verdes; smoke POST 201/dedupe/400s; feed mezcla mock+chain sin duplicados.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — FINAL: deploy + cierre de TASK_BACKLOG2
+- **Bug fix previo:** `/api/gas` leía `GAS_FUNDER_PRIVATE_KEY` pero toda la doc define `GAS_FAUCET_PRIVATE_KEY` → el faucet no-opeaba silencioso. Unificado al nombre documentado.
+- **Verificación mock (flag off):** `npm run build` verde; smoke API end-to-end — sesión create/409-dup/end, merchant update/deactivate-409/regenerate, acuerdo create→deposit→deliver→approve, alias+transfer P2P, feed de actividad unificado, `/api/gas` no-op `no_funder` sin key.
+- **Deploy real a Monad Testnet (10143):** `forge script Deploy.s.sol:Deploy --rpc-url monad_testnet --broadcast` con la key de `02_SmartContracts_Terminal/.env` (deployer `0x36b85…e740d1`, 5 MON). Addresses: MockUSDC `0x27BE…663C`, MockARS `0x1569…4958`, MockExchange `0x1C87…0026` (arsPerUsd 1200e18), TimeStream `0xE320…18C8`, MilestoneEscrow `0xA8f6…d817`. Registradas en `Contract_Addresses.md` + `.env.local` + `.env.example`.
+- **Smoke on-chain (cast):** `arsPerUsd` 1200e18; mint 10.000 mARS; `setRate` 0.001 ARS/s; `approve`+`startStream`→`accrued`→`stopStream` con paid/refund exactos (24s × 1e15 = 2.4e16); escrow con key efímera de contratista: `createProject`→`deliverStage`→`approveStage` (pago exacto 1000 ARS)→`cancelProject` (reembolso 1000 ARS); `/api/gas` `funded:true` (0.05 MON a address nueva) — fix del env var verificado en vivo.
+- **Auditoría Web3-invisible:** grep de `gas|wallet|billetera|hash|0x|USDC|token|smart contract|escrow|blockchain|metamask|wei` en `src/` → cero términos en copy visible (solo identificadores internos/ABIs).
+- **Docs:** `Contract_Addresses.md` con tabla real + links al explorer; `TASK_BACKLOG2.md` sección Final ✅; `TASK_BACKLOG.md` Fase 6 ✅; archivo `nul` de la raíz eliminado.
+- **Pendiente (manual):** smoke UI con login Privy en chain mode (no automatizable sin Google/email); verificación de contratos en explorer (no hay verifier configurado).

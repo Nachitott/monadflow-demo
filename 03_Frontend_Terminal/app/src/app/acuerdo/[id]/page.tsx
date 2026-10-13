@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Timer,
 } from 'lucide-react';
+import { type Address, type Hex } from 'viem';
 import ApproveStageButton from '@/components/escrow/ApproveStageButton';
 import CancelEscrowModal from '@/components/escrow/CancelEscrowModal';
 import MilestoneTracker from '@/components/escrow/MilestoneTracker';
@@ -22,22 +23,49 @@ import {
   stageAmountOf,
   type Agreement,
 } from '@/lib/api';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+import { chainReady } from '@/lib/contracts';
+import {
+  mergeChainAgreement,
+  useMilestoneEscrow,
+} from '@/lib/hooks/useMilestoneEscrow';
+import { reportActivity, reportEscrowStageEvents } from '@/lib/activityReport';
 import { formatAmount } from '@/lib/useExchangeRate';
 
 export default function AgreementDetailPage() {
   const { ready, authenticated, user } = usePrivy();
   const { id } = useParams<{ id: string }>();
-  const { balances, updateBalance } = useBalances();
+  const { balances, updateBalance, refreshBalances } = useBalances();
+  const escrow = useMilestoneEscrow();
+  const onChain = CHAIN_ENABLED && chainReady;
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [missing, setMissing] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const a = await fetchAgreement(id);
-    if (a) setAgreement(a);
-    else setMissing(true);
-  }, [id]);
+    if (!a) {
+      setMissing(true);
+      return;
+    }
+    // Linked projects read their live state from the contract — and the
+    // sync-on-read reporter files any stage events the feed is missing.
+    if (a.chainId && onChain) {
+      const view = await escrow.getProjectView(a.chainId as Hex);
+      if (view) {
+        const merged = mergeChainAgreement(a, view.project, view.milestones);
+        setAgreement(merged);
+        const uid = user?.id;
+        if (uid && uid === a.clientId) reportEscrowStageEvents(merged, uid, 'client');
+        if (uid && uid === a.contractorId) reportEscrowStageEvents(merged, uid, 'contractor');
+        return;
+      }
+    }
+    setAgreement(a);
+  }, [id, onChain, escrow, user?.id]);
 
   useEffect(() => {
     if (!ready || !authenticated) return;
@@ -92,6 +120,12 @@ export default function AgreementDetailPage() {
   );
   const enoughBalance =
     (a.currency === 'ARS' ? balances.ARS : balances.USD) >= a.totalAmount;
+  // Chain mode: a stage delivered past its review window can be claimed by anyone.
+  const autoDue =
+    Boolean(a.chainId) &&
+    currentReview >= 0 &&
+    Boolean(a.autoApproveDays) &&
+    now >= a.stages[currentReview].deliveredAt! + a.autoApproveDays * 86_400_000;
 
   const daysLeft = (deliveredAt?: number) => {
     if (!a.autoApproveDays || !deliveredAt) return null;
@@ -101,7 +135,38 @@ export default function AgreementDetailPage() {
   };
 
   const deposit = async () => {
-    if (!enoughBalance) return;
+    if (!enoughBalance || busy) return;
+    if (onChain) {
+      if (!a.contractorAddress) {
+        setError('No se pudo procesar la solicitud, intentá nuevamente');
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      try {
+        const projectId = await escrow.createProject({
+          contractor: a.contractorAddress as Address,
+          stageCount: a.stageCount,
+          autoReleaseDays: a.autoApproveDays,
+          currency: a.currency,
+          totalAmount: a.totalAmount,
+          title: a.title,
+        });
+        await agreementAction(a.id, {
+          action: 'link-chain',
+          chainId: projectId,
+          clientId: user?.id ?? 'anon',
+          clientName,
+        });
+        refreshBalances();
+        await reload();
+      } catch {
+        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     updateBalance(-a.totalAmount, a.currency);
     setAgreement(
       await agreementAction(a.id, {
@@ -112,8 +177,68 @@ export default function AgreementDetailPage() {
     );
   };
 
+  const approve = async (stageIndex: number) => {
+    if (busy) return;
+    if (a.chainId) {
+      setBusy(true);
+      setError(null);
+      try {
+        await escrow.approveStage(a.chainId as Hex, stageIndex);
+        refreshBalances();
+        await reload();
+      } catch {
+        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    setAgreement(
+      await agreementAction(a.id, { action: 'approve', stageIndex }),
+    );
+  };
+
+  const claimAuto = async () => {
+    if (!a.chainId || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await escrow.claimAutoRelease(a.chainId as Hex);
+      await reload();
+    } catch {
+      setError('No se pudo procesar la solicitud, intentá nuevamente');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmCancel = async () => {
     setCancelOpen(false);
+    if (a.chainId) {
+      setBusy(true);
+      setError(null);
+      try {
+        await escrow.cancelProject(a.chainId as Hex);
+        refreshBalances();
+        await reload();
+        if (frozen > 0 && user?.id) {
+          reportActivity({
+            userId: user.id,
+            kind: 'escrow_refund',
+            amount: frozen,
+            currency: a.currency,
+            label: a.title,
+            refId: a.id,
+            dedupeKey: `escrowrefund:${a.chainId}`,
+          });
+        }
+      } catch {
+        setError('No se pudo procesar la solicitud, intentá nuevamente');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const updated = await agreementAction(a.id, { action: 'cancel' });
     setAgreement(updated);
     if (updated.status === 'cancelled') updateBalance(frozen, a.currency);
@@ -161,10 +286,10 @@ export default function AgreementDetailPage() {
               )}
               <button
                 onClick={deposit}
-                disabled={!enoughBalance}
+                disabled={!enoughBalance || busy}
                 className="sticky bottom-4 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 py-3 font-medium text-white shadow-lg shadow-cyan-950/50 transition enabled:hover:bg-cyan-500 disabled:opacity-40"
               >
-                <Lock className="h-4 w-4" />
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                 Depositar {formatAmount(a.totalAmount, a.currency)}
               </button>
             </>
@@ -194,13 +319,19 @@ export default function AgreementDetailPage() {
             <ApproveStageButton
               stageAmount={stageAmt}
               currency={a.currency}
-              onApprove={async () => {
-                setAgreement(
-                  await agreementAction(a.id, { action: 'approve', stageIndex: currentReview }),
-                );
-              }}
+              onApprove={() => approve(currentReview)}
             />
           </div>
+          {autoDue && (
+            <button
+              onClick={claimAuto}
+              disabled={busy}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-700/60 py-2 text-xs font-medium text-emerald-400 hover:bg-emerald-950/40 disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Timer className="h-3.5 w-3.5" />}
+              Liberar por vencimiento del plazo
+            </button>
+          )}
         </div>
       )}
 
@@ -231,19 +362,26 @@ export default function AgreementDetailPage() {
           </div>
         )}
 
-      {/* Cancel CTA — only between work sessions */}
+      {/* Cancel CTA — mock: between work sessions; on-chain: any time after
+          stage 0 settled (delivered-unapproved stages refund the client) */}
       {a.status === 'active' && isClient && (
         <button
           onClick={() => setCancelOpen(true)}
-          disabled={!stage0Paid || workSessionActive}
+          disabled={busy || !stage0Paid || (!a.chainId && workSessionActive)}
           className="mt-4 w-full rounded-xl border border-rose-700/60 py-3 text-sm font-medium text-rose-400 transition enabled:hover:bg-rose-950/40 disabled:opacity-40"
         >
           {!stage0Paid
             ? 'Cancelación disponible después de liberar la etapa 1'
-            : workSessionActive
+            : !a.chainId && workSessionActive
               ? 'Cancelación disponible al resolver la etapa en curso'
               : 'Cancelar proyecto'}
         </button>
+      )}
+
+      {error && (
+        <p className="mt-3 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2.5 text-center text-xs text-rose-300">
+          {error}
+        </p>
       )}
 
       {a.status === 'completed' && (

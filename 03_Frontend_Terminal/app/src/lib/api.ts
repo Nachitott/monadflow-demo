@@ -95,6 +95,7 @@ export const createAgreement = (body: {
   currency: Currency;
   contractorId: string;
   contractorName: string;
+  contractorAddress?: string;
 }) =>
   fetch('/api/agreements', {
     method: 'POST',
@@ -143,7 +144,9 @@ export const seedBalances = (userId: string, balances: BalancesShape) =>
 
 export const resolveAlias = (alias: string) =>
   fetch(`/api/aliases?alias=${encodeURIComponent(alias)}`).then((r) =>
-    r.ok ? json<{ alias: string; displayName: string }>(r) : null,
+    r.ok
+      ? json<{ alias: string; displayName: string; walletAddress?: string }>(r)
+      : null,
   );
 
 export const fetchMyAlias = (userId: string) =>
@@ -155,6 +158,7 @@ export const registerAlias = async (body: {
   userId: string;
   alias: string;
   displayName: string;
+  walletAddress?: string;
 }): Promise<{ alias?: UserAlias; error?: string }> => {
   const r = await fetch('/api/aliases', {
     method: 'POST',
@@ -176,6 +180,26 @@ export const fetchActivity = (userId: string) =>
     json<ActivityItem[]>,
   );
 
+export interface ActivityPost {
+  userId: string;
+  kind: ActivityItem['kind'];
+  amount: number;
+  currency: Currency;
+  label?: string;
+  refId?: string;
+  /** Idempotency key — server skips duplicates per user. */
+  dedupeKey?: string;
+  /** Unix ms — lets chain events keep their real timestamp. */
+  at?: number;
+}
+
+export const postActivity = (body: ActivityPost) =>
+  fetch('/api/activity', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then((r) => r.json());
+
 export const sendTransfer = async (body: {
   fromUserId: string;
   fromName: string;
@@ -183,6 +207,9 @@ export const sendTransfer = async (body: {
   amount: number;
   currency: Currency;
   note?: string;
+  /** chain:true → funds already moved on-chain; server only files the receipt. */
+  chain?: boolean;
+  txRef?: string;
 }): Promise<{ transfer?: Transfer; error?: string }> => {
   const r = await fetch('/api/transfers', {
     method: 'POST',

@@ -17,8 +17,13 @@ export async function GET(req: NextRequest) {
     if (!record) {
       return NextResponse.json({ error: 'alias_not_found' }, { status: 404 });
     }
-    // Only what the sender needs to see — never the raw account id.
-    return NextResponse.json({ alias: record.alias, displayName: record.displayName });
+    // Only what the sender needs — never the raw account id. The wallet
+    // address travels silently for the on-chain transfer; UI never shows it.
+    return NextResponse.json({
+      alias: record.alias,
+      displayName: record.displayName,
+      walletAddress: record.walletAddress,
+    });
   }
   const user = req.nextUrl.searchParams.get('user');
   if (user) {
@@ -44,7 +49,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'alias_taken' }, { status: 409 });
   }
 
-  const record: AliasRecord = { alias, userId, displayName };
+  const walletAddress =
+    typeof body.walletAddress === 'string' && /^0x[0-9a-fA-F]{40}$/.test(body.walletAddress)
+      ? body.walletAddress
+      : taken?.walletAddress; // re-register keeps the stored address
+  const record: AliasRecord = { alias, userId, displayName, walletAddress };
   await saveAlias(record);
   return NextResponse.json(record, { status: 201 });
 }

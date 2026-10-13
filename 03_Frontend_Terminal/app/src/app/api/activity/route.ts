@@ -5,7 +5,10 @@ import {
   listAgreements,
   listSessions,
   listTransfers,
+  makeActivityId,
+  saveActivity,
   stageAmount,
+  type ActivityRecord,
 } from '@/lib/server/store';
 import type { Currency } from '@/lib/useExchangeRate';
 
@@ -145,16 +148,70 @@ export async function GET(req: NextRequest) {
     if (a.userId !== userId) continue;
     items.push({
       id: a.id,
-      kind: 'deposit',
-      direction: 'in',
+      kind: a.kind,
+      direction: KIND_DIRECTION[a.kind] ?? 'in',
       amount: a.amount,
       currency: a.currency,
       at: a.createdAt,
-      label: 'Carga de saldo',
-      refId: a.id,
+      label: a.label ?? 'Carga de saldo',
+      refId: a.refId ?? a.id,
     });
   }
 
   items.sort((x, y) => y.at - x.at);
   return NextResponse.json(items.slice(0, 50));
+}
+
+const KIND_DIRECTION: Record<ActivityKind, 'in' | 'out'> = {
+  deposit: 'in',
+  transfer_sent: 'out',
+  transfer_received: 'in',
+  consumo: 'out',
+  escrow_deposit: 'out',
+  escrow_release: 'out',
+  escrow_payment: 'in',
+  escrow_refund: 'in',
+};
+
+const ALLOWED_KINDS = new Set<ActivityKind>(Object.keys(KIND_DIRECTION) as ActivityKind[]);
+
+/**
+ * Records an explicit money event (chain-mode flows post here since
+ * their state lives on-chain, not in the domain stores). `dedupeKey`
+ * makes the write idempotent — sync-on-read reporters can fire freely.
+ */
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const userId = String(body.userId ?? '').slice(0, 80);
+  const kind = body.kind as ActivityKind;
+  const amount = Number(body.amount);
+  const currency: Currency = body.currency === 'USD' ? 'USD' : 'ARS';
+
+  if (!userId) return NextResponse.json({ error: 'missing_user' }, { status: 400 });
+  if (!ALLOWED_KINDS.has(kind))
+    return NextResponse.json({ error: 'invalid_kind' }, { status: 400 });
+  if (!Number.isFinite(amount) || amount <= 0)
+    return NextResponse.json({ error: 'invalid_amount' }, { status: 400 });
+
+  const dedupeKey = typeof body.dedupeKey === 'string' ? body.dedupeKey.slice(0, 120) : undefined;
+  if (dedupeKey) {
+    const existing = await listActivity();
+    if (existing.some((a) => a.userId === userId && a.dedupeKey === dedupeKey)) {
+      return NextResponse.json({ deduped: true });
+    }
+  }
+
+  const record: ActivityRecord = {
+    id: makeActivityId(),
+    userId,
+    kind,
+    amount,
+    currency,
+    label: String(body.label ?? '').slice(0, 80) || undefined,
+    refId: String(body.refId ?? '').slice(0, 80) || undefined,
+    dedupeKey,
+    createdAt: Number.isFinite(Number(body.at)) ? Number(body.at) : Date.now(),
+  };
+  await saveActivity(record);
+  return NextResponse.json(record, { status: 201 });
 }

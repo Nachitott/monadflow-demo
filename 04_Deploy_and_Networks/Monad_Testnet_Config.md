@@ -70,6 +70,22 @@ PAYMASTER_API_KEY="your_paymaster_key"
 PRIVATE_KEY="your_deployer_private_key"
 ```
 
+### D. Variables del modo on-chain (app, `TASK_BACKLOG2`)
+La app corre en **modo mock** por defecto. Para activar ejecución real sobre los contratos
+hay que completar **todas** estas variables (si falta alguna, `chainReady=false` → mock):
+```bash
+NEXT_PUBLIC_CHAIN_MODE=1
+NEXT_PUBLIC_TIME_STREAM="0x..."           # post Deploy.s.sol
+NEXT_PUBLIC_MILESTONE_ESCROW="0x..."
+NEXT_PUBLIC_MOCK_USDC="0x..."
+NEXT_PUBLIC_MOCK_ARS="0x..."
+NEXT_PUBLIC_MOCK_EXCHANGE="0x..."
+GAS_FAUCET_PRIVATE_KEY="0x..."            # SOLO server (sin NEXT_PUBLIC_)
+```
+Mientras no exista paymaster real, `/api/gas` fondea MON a las embedded wallets
+desde `GAS_FAUCET_PRIVATE_KEY` (cooldown por address). Cuando llegue el ERC-4337
+con paymaster, el faucet queda obsoleto.
+
 ---
 
 ## 🔗 Archivos Relacionados (Obsidian Graph)

@@ -47,6 +47,10 @@ export interface AgreementState {
   autoApproveDays: number; // 0 = disabled
   contractorId: string;
   contractorName: string;
+  /** Embedded wallet of the contractor — set in chain mode drafts. */
+  contractorAddress?: string;
+  /** On-chain MilestoneEscrow projectId — set when the client deposits. */
+  chainId?: string;
   clientId?: string;
   clientName?: string;
   linkActive: boolean; // killswitch (pre-deposit)
@@ -74,6 +78,8 @@ export interface AliasRecord {
   alias: string; // 'nacho.mp' — unique, lowercase
   userId: string;
   displayName: string;
+  /** Embedded wallet behind the alias — set in chain mode. Never rendered. */
+  walletAddress?: string;
 }
 
 /**
@@ -86,9 +92,23 @@ export interface AliasRecord {
 export interface ActivityRecord {
   id: string; // 'ac-...'
   userId: string;
-  kind: 'deposit';
+  kind:
+    | 'deposit'
+    | 'transfer_sent'
+    | 'transfer_received'
+    | 'consumo'
+    | 'escrow_deposit'
+    | 'escrow_release'
+    | 'escrow_payment'
+    | 'escrow_refund';
   amount: number;
   currency: Currency;
+  /** Counterparty/context shown in the feed (alias, title, merchant). */
+  label?: string;
+  /** Friendly id shown as "Comprobante #…" — never a tx hash. */
+  refId?: string;
+  /** Idempotency key — server skips the write when already present. */
+  dedupeKey?: string;
   createdAt: number;
 }
 

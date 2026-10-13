@@ -6,7 +6,7 @@
 - [x] Fase 3: UI/UX Modo 1 (Pay-per-use Stream & Live Dashboard)
 - [x] Fase 4: UI/UX Modo 2 (Milestone-Lock Escrow & Contrataciones)
 - [x] Fase 5: Transferencias P2P (Modo 3 — backend intercambiable)
-- [ ] Fase 6: Conexión con Smart Contracts y Animaciones en Tiempo Real
+- [x] Fase 6: Conexión con Smart Contracts y Animaciones en Tiempo Real
 
 ---
 
@@ -94,8 +94,16 @@
 
 ---
 
-## �🎨 Fase 6: Componentes de Interfaz & Pulido Visual
-- [ ] Aplicar diseño Mobile-First enfocado en usabilidad en smartphones.
-- [ ] Sanitización estricta de textos: Garantizar cero uso de términos como "Gas", "Hex", "Hash", "USDC" o "Wallet" en la interfaz.
-- [ ] Migración de la ejecución de `useTransfers` al `transfer` ERC-20 (o `TransferHub.sendTo`) junto con el resto de la integración on-chain.
-- [ ] Pruebas de integración con los ABIs reales generados en `02_SmartContracts_Terminal/ABIs/`.
+---
+
+> **➡️ Migración on-chain:** el paso a ejecución real sobre los contratos de
+> `02_SmartContracts_Terminal/` se trackea en [[TASK_BACKLOG2.md]] (F0–F5 + deploy).
+> Este archivo cubre solo las fases del mock funcional.
+
+---
+
+## 🎨 Fase 6: Componentes de Interfaz & Pulido Visual ✅
+- [x] Aplicar diseño Mobile-First enfocado en usabilidad en smartphones. (sticky CTAs, grilla responsiva, escáner de cámara — verificado en Fases 3–5.5)
+- [x] Sanitización estricta de textos: Garantizar cero uso de términos como "Gas", "Hex", "Hash", "USDC" o "Wallet" en la interfaz. (auditoría grep 2026-10-13: cero leaks en copy visible)
+- [x] Migración de la ejecución de `useTransfers` al `transfer` ERC-20 (o `TransferHub.sendTo`) junto con el resto de la integración on-chain. (F4 de TASK_BACKLOG2)
+- [x] Pruebas de integración con los ABIs reales generados en `02_SmartContracts_Terminal/ABIs/`. (smoke on-chain en sección "Final" de TASK_BACKLOG2)

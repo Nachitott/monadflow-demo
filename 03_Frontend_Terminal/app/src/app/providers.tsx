@@ -29,6 +29,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
+          // Silent signing: the embedded wallet signs without a wallet UI,
+          // keeping the chain invisible (Web3 Invisible rule).
+          showWalletUIs: false,
         },
         defaultChain: monadTestnet,
         supportedChains: [monadTestnet],
