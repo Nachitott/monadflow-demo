@@ -44,6 +44,9 @@ export async function POST(req: NextRequest) {
     autoApproveDays,
     contractorId: String(body.contractorId ?? 'anon').slice(0, 80),
     contractorName: String(body.contractorName ?? 'Contratista').slice(0, 40),
+    contractorAddress: body.contractorAddress
+      ? String(body.contractorAddress).slice(0, 64)
+      : undefined,
     linkActive: true,
     status: 'pending',
     stages: Array.from({ length: stageCount }, () => ({ approved: false })),

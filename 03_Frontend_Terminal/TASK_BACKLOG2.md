@@ -47,12 +47,20 @@ La home ya puede cargar saldo real y leer balances/precio desde la chain.
 | Nombre del comercio on-chain (hoy se muestra el nombre del registro mock, solo presentación; el contrato no tiene campo de nombre) | Diferido — registry off-chain o campo en perfil, no bloquea |
 | `npm run build` verde + smoke mock mode (home, consumo, comercio, sesión create/close, merchant deactivate/regenerate) | ✅ |
 
-## F3 — Modo 2: acuerdos por etapas (MilestoneEscrow) ☐
+## F3 — Modo 2: acuerdos por etapas (MilestoneEscrow) ✅
 
-- [ ] `useMilestoneEscrow` — `createProject`, `deposit`, `release`, `refund`, lecturas de proyecto/etapas
-- [ ] `/acuerdo` híbrido: crear borrador off-chain (como hoy) y, en chain mode, ejecutar `createProject` + `deposit` al confirmar
-- [ ] `/acuerdo/[id]` chain mode: estado de etapas desde el contrato, `release`/`refund` por etapa
-- [ ] Preservar 100% el flujo mock cuando el flag esté apagado
+- [x] `useMilestoneEscrow` — `createProject` (approve + depósito atómico del 100%, parse `ProjectCreated`), `deliverStage`, `approveStage`, `cancelProject`, `claimAutoRelease`, `getProjectView` (proyecto + hitos en display units) + `mergeChainAgreement`
+- [x] Store/API: `AgreementState.contractorAddress` + `chainId`; `POST /api/agreements` acepta `contractorAddress`; acción `link-chain` en `/api/agreements/[id]` (vincula projectId tras el depósito on-chain, valida formato `0x`, 409 si ya está activo)
+- [x] `/acuerdo` híbrido: borrador off-chain siempre (es el índice/QR compartible); en chain mode registros con `chainId` leen estado vivo del contrato; "Entregar etapa" → `deliverStage` sobre la etapa actual; "Cobrar etapa — plazo vencido" → `claimAutoRelease`
+- [x] `/acuerdo/[id]` chain mode: "Depositar" → `ensureApproval` + `createProject` → `link-chain`; approve/cancel on-chain; "Liberar por vencimiento" cuando el timer venció
+- [x] Preservar 100% el flujo mock cuando el flag esté apagado (verificado: deposit→deliver→approve→cancel, 403 sin luz verde, 409 doble depósito)
+- [x] `npm run build` verde + smoke mock mode
+
+**Diferencias contractuales documentadas** (semántica on-chain ≠ mock):
+- `createProject` deposita el 100% atómicamente — no hay fase pending on-chain; el borrador off-chain es solo índice/QR.
+- No existe "luz verde" por etapa on-chain — el contrato permite entregar la etapa actual apenas se aprueba la anterior.
+- `cancelProject` on-chain: habilitado tras liberar etapa 0, y reembolsa al cliente también etapas entregadas-no-aprobadas (el mock bloqueaba la cancelación con sesión de trabajo activa).
+- Disputas: `agent = address(0)` en `createProject` → `disputeStage`/`resolveDispute` quedan deshabilitados hasta el orquestador.
 
 ## F4 — P2P por alias con ERC-20 ☐
 

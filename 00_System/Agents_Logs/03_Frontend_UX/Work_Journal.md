@@ -70,3 +70,11 @@ BitÃ¡cora de trabajo para este perfil.
 - Regla Web3-invisible respetada: nada de 0x/hash/gas en UI; errores genéricos "No se pudo procesar".
 - Verificado: `tsc --noEmit` limpio, `npm run build` verde (todas las rutas + `/api/gas`), smoke mock end-to-end (sesión create/close, merchant deactivate/regenerate). Chain mode queda inactivo hasta deploy — `chainReady=false` → mock intacto.
 - Backlog nuevo: `03_Frontend_Terminal/TASK_BACKLOG2.md` con F0–F2 ✅ y F3–F5 pendientes.
+
+## 2026-10-13 — Agente 03 (Frontend UX) — F3: MilestoneEscrow híbrido
+- `useMilestoneEscrow`: createProject (approve + escrow atómico del 100%, parse ProjectCreated), deliverStage/approveStage/cancelProject/claimAutoRelease, getProjectView (display units), mergeChainAgreement (mock record ↔ estado on-chain → shape Agreement).
+- Store: `AgreementState.contractorAddress` + `chainId`. API: `POST /api/agreements` toma contractorAddress; acción `link-chain` (0x-format, 409 duplicado) vincula el projectId tras el depósito on-chain.
+- `/acuerdo`: draft off-chain siempre (índice/QR); registros con chainId leen del contrato cada poll; entregar → deliverStage(currentStage); "Cobrar etapa — plazo vencido" → claimAutoRelease.
+- `/acuerdo/[id]`: depositar → ensureApproval + createProject → link-chain; approve/cancel on-chain con refreshBalances (sin updateBalance al mock en chain mode); "Liberar por vencimiento" cuando vence el timer; errores con copy genérico es-AR.
+- Semántica contract≠mock documentada en TASK_BACKLOG2 (depósito atómico, sin luz verde, cancel con reembolso de entregadas-no-aprobadas, disputas off — agent=0x0).
+- Verificado: tsc + build verdes; smoke API: link-chain 400/200/409, ciclo mock completo sin regresión, rutas 200.

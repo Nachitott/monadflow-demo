@@ -47,6 +47,10 @@ export interface AgreementState {
   autoApproveDays: number; // 0 = disabled
   contractorId: string;
   contractorName: string;
+  /** Embedded wallet of the contractor — set in chain mode drafts. */
+  contractorAddress?: string;
+  /** On-chain MilestoneEscrow projectId — set when the client deposits. */
+  chainId?: string;
   clientId?: string;
   clientName?: string;
   linkActive: boolean; // killswitch (pre-deposit)

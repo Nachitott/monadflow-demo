@@ -18,6 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { type Hex } from 'viem';
 import {
   agreementAction,
   createAgreement,
@@ -25,6 +26,12 @@ import {
   stageAmountOf,
   type Agreement,
 } from '@/lib/api';
+import { CHAIN_ENABLED } from '@/lib/chainMode';
+import { chainReady, getEmbeddedAddress } from '@/lib/contracts';
+import {
+  mergeChainAgreement,
+  useMilestoneEscrow,
+} from '@/lib/hooks/useMilestoneEscrow';
 import { formatAmount, type Currency } from '@/lib/useExchangeRate';
 
 const STATUS_LABEL: Record<Agreement['status'], { text: string; cls: string }> = {
@@ -38,12 +45,16 @@ type Tab = 'mine' | 'client';
 
 export default function AcuerdoPage() {
   const { ready, authenticated, user } = usePrivy();
+  const escrow = useMilestoneEscrow();
+  const onChain = CHAIN_ENABLED && chainReady;
+  const address = getEmbeddedAddress(user);
   const [tab, setTab] = useState<Tab>('mine');
   const [mine, setMine] = useState<Agreement[]>([]);
   const [asClient, setAsClient] = useState<Agreement[]>([]);
   const [creating, setCreating] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [origin, setOrigin] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   // wizard state
   const [title, setTitle] = useState('');
@@ -55,16 +66,35 @@ export default function AcuerdoPage() {
   const contractorName =
     user?.google?.name ?? user?.apple?.email ?? user?.email?.address ?? 'Contratista';
 
+  /** Records with chainId get their live state from the contract; drafts
+   *  (pre-deposit) stay off-chain. */
+  const mergeChain = useCallback(
+    async (list: Agreement[]): Promise<Agreement[]> => {
+      if (!onChain) return list;
+      const out: Agreement[] = [];
+      for (const a of list) {
+        if (!a.chainId) {
+          out.push(a);
+          continue;
+        }
+        const view = await escrow.getProjectView(a.chainId as Hex);
+        out.push(view ? mergeChainAgreement(a, view.project, view.milestones) : a);
+      }
+      return out;
+    },
+    [onChain, escrow],
+  );
+
   const reload = useCallback(async () => {
     if (!user?.id) return;
     const [m, c] = await Promise.all([
       fetchAgreements({ contractor: user.id }),
       fetchAgreements({ client: user.id }),
     ]);
-    setMine(m);
-    setAsClient(c);
+    setMine(await mergeChain(m));
+    setAsClient(await mergeChain(c));
     setOrigin(window.location.origin);
-  }, [user?.id]);
+  }, [user?.id, mergeChain]);
 
   useEffect(() => {
     if (!ready || !authenticated) return;
@@ -103,6 +133,7 @@ export default function AcuerdoPage() {
       currency,
       contractorId: user?.id ?? 'anon',
       contractorName,
+      contractorAddress: onChain ? address : undefined,
     });
     setTitle('');
     setTotal('');
@@ -123,14 +154,53 @@ export default function AcuerdoPage() {
   const nextDeliverable = (a: Agreement) =>
     a.stages.findIndex((s) => !s.approved && !s.deliveredAt);
 
+  /** Contract rule: only the first unapproved stage is actionable. */
+  const currentStageIdx = (a: Agreement) =>
+    a.stages.findIndex((s) => !s.approved);
+
+  const autoReleaseDue = (a: Agreement, idx: number) => {
+    const s = a.stages[idx];
+    if (!s?.deliveredAt || !a.autoApproveDays) return false;
+    return Date.now() >= s.deliveredAt + a.autoApproveDays * 86_400_000;
+  };
+
+  const deliver = async (a: Agreement, idx: number) => {
+    if (a.chainId) {
+      setBusyId(a.id);
+      try {
+        await escrow.deliverStage(a.chainId as Hex, idx);
+      } finally {
+        setBusyId(null);
+      }
+    } else {
+      await agreementAction(a.id, { action: 'deliver', stageIndex: idx });
+    }
+    reload();
+  };
+
+  const claimAuto = async (a: Agreement) => {
+    if (!a.chainId) return;
+    setBusyId(a.id);
+    try {
+      await escrow.claimAutoRelease(a.chainId as Hex);
+    } finally {
+      setBusyId(null);
+    }
+    reload();
+  };
+
   const list = tab === 'mine' ? mine : asClient;
   const ongoing = list.filter((a) => a.status === 'pending' || a.status === 'active');
   const history = list.filter((a) => a.status === 'completed' || a.status === 'cancelled');
 
   const card = (a: Agreement) => {
     const st = STATUS_LABEL[a.status];
+    const isChain = Boolean(a.chainId);
     const nextIdx = nextDeliverable(a);
     const next = nextIdx >= 0 ? a.stages[nextIdx] : undefined;
+    const curIdx = currentStageIdx(a);
+    const cur = curIdx >= 0 ? a.stages[curIdx] : undefined;
+    const busy = busyId === a.id;
     const canDelete = a.status !== 'active';
     return (
       <div key={a.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -192,8 +262,35 @@ export default function AcuerdoPage() {
           </div>
         )}
 
-        {/* Contractor delivers the current stage — only with green light */}
-        {a.status === 'active' && tab === 'mine' && nextIdx >= 0 && next && (
+        {/* Contractor delivers the current stage — mock needs green light,
+            on-chain any current stage is deliverable */}
+        {a.status === 'active' && tab === 'mine' && isChain && curIdx >= 0 && cur && (
+          !cur.deliveredAt ? (
+            <button
+              onClick={() => deliver(a, curIdx)}
+              disabled={busy}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-sky-600 py-2.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
+              Entregar etapa {curIdx + 1}
+            </button>
+          ) : autoReleaseDue(a, curIdx) ? (
+            <button
+              onClick={() => claimAuto(a)}
+              disabled={busy}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}
+              Cobrar etapa {curIdx + 1} — plazo de revisión vencido
+            </button>
+          ) : (
+            <p className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-700 py-2.5 text-xs text-slate-500">
+              <Hourglass className="h-3.5 w-3.5" />
+              Etapa {curIdx + 1} entregada — esperando aprobación del cliente
+            </p>
+          )
+        )}
+        {a.status === 'active' && tab === 'mine' && !isChain && nextIdx >= 0 && next && (
           next.authorizedAt ? (
             <button
               onClick={async () => {
@@ -212,7 +309,8 @@ export default function AcuerdoPage() {
             </p>
           )
         )}
-        {a.status === 'active' && tab === 'mine' && nextIdx === -1 && (
+        {a.status === 'active' && tab === 'mine' &&
+          (isChain ? curIdx === -1 : nextIdx === -1) && (
           <p className="mt-3 text-center text-xs text-slate-500">
             Todas las etapas entregadas — esperando aprobación del cliente.
           </p>

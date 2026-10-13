@@ -95,6 +95,7 @@ export const createAgreement = (body: {
   currency: Currency;
   contractorId: string;
   contractorName: string;
+  contractorAddress?: string;
 }) =>
   fetch('/api/agreements', {
     method: 'POST',
