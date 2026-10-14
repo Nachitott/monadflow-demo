@@ -57,12 +57,19 @@ export function useMonadStream() {
   const merchantProfile = useCallback(
     async (merchant: Address): Promise<ChainMerchant | null> => {
       if (!client || !onChain || !CONTRACTS.timeStream) return null;
-      const p = (await client.readContract({
+      // Public getters multi-output decoden como array posicional en viem;
+      // se normaliza a objeto (los names del ABI llegan si el decode cambia).
+      const raw = (await client.readContract({
         address: CONTRACTS.timeStream,
         abi: ABIS.timeStream,
         functionName: 'merchants',
         args: [merchant],
-      })) as { ratePerSecond: bigint; rateCurrency: number; disabled: boolean };
+      })) as
+        | [bigint, number, boolean]
+        | { ratePerSecond: bigint; rateCurrency: number; disabled: boolean };
+      const p = Array.isArray(raw)
+        ? { ratePerSecond: raw[0], rateCurrency: raw[1], disabled: raw[2] }
+        : raw;
       const currency: Currency = p.rateCurrency === 1 ? 'USD' : 'ARS';
       return {
         address: merchant,

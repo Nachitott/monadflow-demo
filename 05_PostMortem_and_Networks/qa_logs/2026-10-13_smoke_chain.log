@@ -1,0 +1,46 @@
+# Chain smoke — 2026-10-13T23:51:46.208Z — chain 10143
+qa=0x770281e97e05cB692A9fA50DbC4aa38ec8397088 deployer=0x36b85Da9DdF1f9D67b02830D13506317abe740d1
+
+[PASS] POST /api/gas fondea wallet nueva — hash=0xf525d0da6442fcdb12b33283c5beac46a7b8930860af6ad1122aa260f0b29be7
+    faucet tx confirmó en 550ms
+[PASS] QA tiene MON para gas — 0.4 MON
+    tx mint mARS: 0x585d0e78e1b13501543d88987347af42eec373a548482714811a0b2248445ef6 (confirmó en 1130ms, status success)
+    tx mint mUSDC: 0x104786a424a030f16f95451d004cdd73a19486cbd185c6c19bb86d7aeea498df (confirmó en 1117ms, status success)
+[PASS] Saldo mARS del QA
+
+## TimeStream (Modo 1)
+    tx setRate: 0xddaac25f0decf703261e4c41bfaae5ac8a87e72a5e8bd70b7cf2efae7253a526 (confirmó en 1116ms, status success)
+    tx approve TimeStream: 0x90c293e31cba0bfbb69fea53456898d3f1264aeb9da4560eb29eaedbab35bee0 (confirmó en 1474ms, status success)
+    tx startStream: 0xe6e85b9b6e0ae9e62ddb21dc0614742f6d9c97c8dabae2b044592113163d3f68 (confirmó en 1091ms, status success)
+[PASS] StreamStarted emite sessionId — 0x2ce232234d3b0a2f953809305d4165b5284591390e03fb27f7d88a2579db6503
+    tx stopStream: 0x32ae5524f4ee9e24fc4b755fec56d8d049ebc4903ce418682cc5a339c670162a (confirmó en 1090ms, status success)
+[PASS] StreamSettled con paid/refund — paid=2 refund=8 dur=4s
+[PASS] paid + refund == cap (devolución exacta)
+[PASS] QA recibe refund exacto del cap
+[PASS] Comercio acreditado
+[PASS] Sesión on-chain cerrada (active=false)
+    tx deactivateQR: 0x1d861d92d57b2ecd2510f19af556a3616990b24900bd60cf447e4f18247c2b64 (confirmó en 1132ms, status success)
+[PASS] Killswitch on-chain (disabled=true)
+    tx reactivateQR: 0xd3e344bf2d23f08cb7781e546d6f01266bed46c14b517c74128390a69a0bb099 (confirmó en 1120ms, status success)
+
+## MilestoneEscrow (Modo 2)
+    tx approve Escrow: 0x98600524e83bbde274f557c944a3989d9f8b114fa39c028668291125d137f332 (confirmó en 569ms, status success)
+    tx createProject (100% upfront): 0xa3833327a4cdf3e7a74d1fc84f788107da5679d38a8325e6a643a1a31f428c01 (confirmó en 1081ms, status success)
+[PASS] ProjectCreated emite projectId — 0x73de2e517183046cbfcc681223e8207e0ef32cf284473d7f0ccd9f38ab70c966
+[PASS] Escrow retiene el 100%
+[PASS] REGLA CLAVE on-chain: cancelProject revierte pre-etapa-1
+    tx deliverStage(0): 0xc34d599eb0846d6b146a6018a4605427df048103b1a1788a0a0150a3d26d6a91 (confirmó en 1124ms, status success)
+    tx approveStage(0): 0xf646cb352c18bf62a60192e075c49de1c9a0178b06fced48f8caf023564cdb9d (confirmó en 1081ms, status success)
+[PASS] Contratista cobró etapa 1 — 5 ARS
+    tx cancelProject: 0xbe2a653b89be6600bcd3750527b9bd5ea45ce2597831f7752899ed134ca7a991 (confirmó en 1090ms, status success)
+[PASS] Cancelación post-etapa-1 con reembolso real — refund event=? ARS
+
+## P2P + Exchange
+    tx transfer mUSDC (P2P): 0x791bdbaf61b3fd7c835f0cb4eca40103ac649280568ebb4bdbde50056c477287 (confirmó en 1082ms, status success)
+[PASS] Transferencia ERC-20 real (comprobante=hash) — 0x791bdbaf61b3fd7c835f0cb4eca40103ac649280568ebb4bdbde50056c477287
+    tx approve Exchange: 0x80169e47906725330cca814ded85e196965a72001d64e736075614dd0e9c7299 (confirmó en 546ms, status success)
+    tx swapARSforUSDC: 0xa13db79a7ec7846de0b9f0d31276569b78719e64db8eb45577d137eb89253819 (confirmó en 554ms, status success)
+[PASS] Swap ARS→USD @1200 — +1 USD
+
+# Latencia txs: avg 1025ms | min 546 | max 1474
+# RESULTADO: 17 PASS / 0 FAIL
