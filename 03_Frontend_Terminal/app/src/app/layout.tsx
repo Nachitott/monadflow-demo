@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'MonadFlow',
   description: 'Pagos en tiempo real y garantías protegidas, simple como cualquier app.',
+  manifest: '/manifest.webmanifest',
 };
 
 export const dynamic = 'force-dynamic';
