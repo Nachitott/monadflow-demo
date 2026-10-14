@@ -11,8 +11,12 @@ import { monadTestnet } from '@/lib/chains';
 
 export const dynamic = 'force-dynamic';
 
-const MIN_BALANCE = parseEther('0.01');
-const TOP_UP = parseEther('0.05');
+// Gas price ronda ~100 gwei en testnet → cada tx de negocio cuesta
+// ~0.02-0.04 MON. 0.01 MON no paga ni una tx y 0.05 se agota a mitad del
+// flujo (approve+start+stop ≈ 0.06). Top-up dimensionado para el recorrido
+// completo de demo (~10 txs) con margen.
+const MIN_BALANCE = parseEther('0.05');
+const TOP_UP = parseEther('0.4');
 
 /**
  * Silent gas faucet: tops up a user's embedded wallet so every action

@@ -1,0 +1,51 @@
+# Smoke E2E — 2026-10-13T23:42:37.403Z — base http://localhost:3001
+
+## Modo 1 — Comercio / Consumo por tiempo
+[PASS] GET /api/merchant responde estado — qrId=qr-mv78l2oy-tw25 active=true rate=60
+[PASS] Editar tarifa/nombre del comercio — rate=30 name=Cowork QA
+[PASS] Check-in con auto-cap crea sesión — id=op-mv7btr5l-ad9jk cap=5000 rate/s=0.5
+[PASS] Re-scan QR no duplica sesión (409 active_session)
+[PASS] Sesión viva acumula tiempo — elapsed=3990ms
+[PASS] Finalizar sesión cierra con monto — totalPaid=12.5
+[PASS] Killswitch OFF desactiva QR
+[PASS] Check-in bloqueado con QR inactivo (409 merchant_inactive)
+[PASS] Regenerar QR cierra sesiones activas y cobra lo consumido — nuevoQr=qr-mv7btwkj-16ft huerfana.ended=true paid=0.261
+
+## Modo 2 — Acuerdo con fondo protegido por etapas
+[PASS] Crear acuerdo (3 etapas, $9.000 ARS) — id=ag-mv7btxqi-togc
+[PASS] Cancelar antes del depósito es inválido (409)
+[PASS] Killswitch del link pre-depósito
+[PASS] Depósito bloqueado con link inactivo (409 link_inactive)
+[PASS] Depósito 100% activa el acuerdo + autoriza etapa 1
+[PASS] REGLA CLAVE: cancelar bloqueado antes de pagar etapa 1 (409 stage0_locked) — error=stage0_locked
+[PASS] Contratista entrega etapa 1
+[PASS] Cliente aprueba etapa 1 → pagada
+[PASS] Entregar etapa 2 sin autorización falla (403 stage_not_authorized)
+[PASS] Cancelar habilitado tras pagar etapa 1 → cancelled
+[PASS] Reembolso = etapas no aprobadas (2/3 → $6.000 ARS) — frozen=6000
+
+## Modo 3 — Transferencias P2P por alias
+[PASS] Registrar alias — alias=qa-7bt26x.mp
+[PASS] Lookup de alias resuelve destinatario
+[PASS] Alias inexistente → 404 alias_not_found
+[PASS] Cargar saldo ARS (mock Mercado Pago) — ARS=10000
+[PASS] Saldo insuficiente → 402 insufficient_funds
+[PASS] Transferencia por alias → comprobante #ID — id=tr-mv7bu5gz-g725 status=completed
+[PASS] Comprobante consultable por ID
+[PASS] Saldo debitado post-transferencia — ARS=8500
+[PASS] Destinatario acreditado — ARS=1500
+[PASS] Historial de transferencias
+
+## Feed de actividad unificado
+[PASS] Feed incluye depósito fiat
+[PASS] Feed incluye transferencia enviada
+[PASS] Feed incluye consumo (sesión)
+[PASS] Feed incluye escrow (depósito/release/refund) — kinds=transfer_sent,deposit,escrow_refund,escrow_release,escrow_deposit,consumo
+[PASS] Destinatario ve transfer_received
+
+## Errores — nunca texto técnico
+[PASS] Sesión inexistente → 404 not_found
+[PASS] Acuerdo inexistente → 404 not_found
+[PASS] Acción desconocida → 400
+
+# RESULTADO: 38 PASS / 0 FAIL
